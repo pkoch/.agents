@@ -35,8 +35,8 @@ function setProgress(state: number, value?: number): void {
 	ghosttyWrite(`\x1b]9;4;${args}\x07`);
 }
 
-function buildTitle(extra?: string): string {
-	const segments: string[] = ["π", path.basename(process.cwd())];
+function buildTitle(extra?: string, marker = "π"): string {
+	const segments: string[] = [marker, path.basename(process.cwd())];
 	if (sessionName) segments.push(sessionName);
 	if (extra) segments.push(extra);
 	return segments.join(" · ");
@@ -59,7 +59,7 @@ function currentFrame(): string {
 }
 
 function renderWorkingTitle(ctx: ExtensionContext): void {
-	ctx.ui.setTitle(`${currentFrame()} ${buildTitle(currentTool)}`);
+	ctx.ui.setTitle(buildTitle(currentTool, currentFrame()));
 }
 
 function startSpinner(ctx: ExtensionContext): void {
