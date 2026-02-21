@@ -328,11 +328,6 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.on("user_bash", () => {
-		if (!sandboxEnabled || !sandboxInitialized) return;
-		return { operations: createSandboxedBashOps() };
-	});
-
 	pi.on("session_start", async (_event, ctx) => {
 		clearSandboxStatus(ctx);
 
