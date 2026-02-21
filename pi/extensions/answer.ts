@@ -35,36 +35,56 @@ interface ExtractionResult {
   questions: ExtractedQuestion[];
 }
 
-const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering.
+const SYSTEM_PROMPT = `You extract items that need user input from assistant text:
+
+- Direct questions
+- Choices between alternatives (even if not phrased as a question)
+- Other pending decisions that still require user input
+
+When a decision is implicit, rewrite it as a clear question.
 
 Output a JSON object with this structure:
 {
   "questions": [
     {
-      "question": "The question text",
-      "context": "Optional context that helps answer the question"
+      "question": "Clear question requiring user input",
+      "context": "Optional concise context (options, tradeoffs, constraints)"
     }
   ]
 }
 
 Rules:
-- Extract all questions that require user input
-- Keep questions in the order they appeared
-- Be concise with question text
-- Include context only when it provides essential information for answering
-- If no questions are found, return {"questions": []}
+- Extract all pending decisions (questions, choices, etc)
+- Keep them in the order they appear
+- Be concise and specific in question text
+- Add context only when it is essential for the user to answer
+- If nothing requires input, return {"questions": []}
 
+Example input: "We can use PostgreSQL (stronger relational features) or SQLite (simpler local setup). Both are viable."
 Example output:
 {
   "questions": [
     {
-      "question": "What is your preferred database?",
-      "context": "We can only configure MySQL and PostgreSQL because of what is implemented."
-    },
-    {
-      "question": "Should we use TypeScript or JavaScript?"
+      "question": "PostgreSQL or SQLite?",
+      "context": "PostgreSQL has stronger relational features; SQLite offers a simpler local setup."
     }
   ]
+}
+
+Example input: "I can split this into two commits or keep it in one commit. Either is fine."
+Example output:
+{
+  "questions": [
+    {
+      "question": "Split into two commits or keep as one?"
+    }
+  ]
+}
+
+Example input: "I already started implementing Option A."
+Example output:
+{
+  "questions": []
 }`;
 
 const OPENAI_FAST_MODEL_ID = "gpt-5.3-codex-spark";
