@@ -67,11 +67,20 @@ Example output:
   ]
 }`;
 
-const CODEX_MODEL_ID = "gpt-5.1-codex-mini";
-const HAIKU_MODEL_ID = "claude-haiku-4-5";
+const OPENAI_FAST_MODEL_ID = "gpt-5.3-codex-spark";
+const ANTHROPIC_FAST_MODEL_ID = "claude-haiku-4-5";
+
+type ModelFamily = "openai" | "anthropic";
+
+function detectModelFamily(provider: string): ModelFamily | null {
+  const normalizedProvider = provider.toLowerCase();
+  if (normalizedProvider.includes("openai")) return "openai";
+  if (normalizedProvider.includes("anthropic")) return "anthropic";
+  return null;
+}
 
 /**
- * Prefer Codex mini for extraction when available, otherwise fallback to haiku or the current model.
+ * Prefer a fast model from the current model family when available.
  */
 async function selectExtractionModel(
   currentModel: Model<Api>,
@@ -80,25 +89,26 @@ async function selectExtractionModel(
     getApiKey: (model: Model<Api>) => Promise<string | undefined>;
   },
 ): Promise<Model<Api>> {
-  const codexModel = modelRegistry.find("openai-codex", CODEX_MODEL_ID);
-  if (codexModel) {
-    const apiKey = await modelRegistry.getApiKey(codexModel);
+  const family = detectModelFamily(currentModel.provider);
+  if (!family) return currentModel;
+
+  const modelId = family === "openai" ? OPENAI_FAST_MODEL_ID : ANTHROPIC_FAST_MODEL_ID;
+  const providerCandidates =
+    family === "openai"
+      ? [currentModel.provider, "openai-codex", "openai"]
+      : [currentModel.provider, "anthropic"];
+
+  for (const provider of new Set(providerCandidates)) {
+    const model = modelRegistry.find(provider, modelId);
+    if (!model) continue;
+
+    const apiKey = await modelRegistry.getApiKey(model);
     if (apiKey) {
-      return codexModel;
+      return model;
     }
   }
 
-  const haikuModel = modelRegistry.find("anthropic", HAIKU_MODEL_ID);
-  if (!haikuModel) {
-    return currentModel;
-  }
-
-  const apiKey = await modelRegistry.getApiKey(haikuModel);
-  if (!apiKey) {
-    return currentModel;
-  }
-
-  return haikuModel;
+  return currentModel;
 }
 
 /**
@@ -448,7 +458,7 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      // Select the best model for extraction (prefer Codex mini, then haiku)
+      // Select the best model for extraction (prefer a fast model in the current family).
       const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
 
       // Run extraction with loader UI
