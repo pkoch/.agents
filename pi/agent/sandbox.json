@@ -30,7 +30,8 @@
       "openai.com",
       "*.openai.com",
       "chatgpt.com",
-      "*.chatgpt.com"
+      "*.chatgpt.com",
+      "*.googleapis.com"
     ],
     "deniedDomains": [],
     "allowLocalBinding": true,
