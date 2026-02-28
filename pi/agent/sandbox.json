@@ -56,7 +56,8 @@
       "~/.ssh",
       "~/.gnupg",
       "~/.cache",
-      "~/.docker"
+      "~/.docker",
+      "~/.npm"
     ],
     "denyWrite": [
       ".env",
