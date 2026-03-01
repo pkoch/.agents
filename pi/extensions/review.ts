@@ -40,6 +40,22 @@ let endReviewInProgress = false;
 
 const REVIEW_STATE_TYPE = "review-session";
 
+type PromptStatus = "completed" | "error";
+
+async function withPromptSignal<T>(pi: ExtensionAPI, run: () => Promise<T>): Promise<T> {
+  pi.events.emit("ui:prompt_start", { source: "review" });
+
+  let status: PromptStatus = "completed";
+  try {
+    return await run();
+  } catch (error) {
+    status = "error";
+    throw error;
+  } finally {
+    pi.events.emit("ui:prompt_end", { source: "review", status });
+  }
+}
+
 type ReviewSessionState = {
   active: boolean;
   originId?: string;
@@ -528,7 +544,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
     const smartDefaultIndex = items.findIndex((item) => item.value === smartDefault);
 
     while (true) {
-      const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+      const result = await withPromptSignal(pi, () => ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
         const container = new Container();
         container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
         container.addChild(new Text(theme.fg("accent", theme.bold("Select a review preset"))));
@@ -565,7 +581,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
             tui.requestRender();
           },
         };
-      });
+      }));
 
       if (!result) return null;
 
@@ -642,7 +658,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
       description: branch === defaultBranch ? "(default)" : "",
     }));
 
-    const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+    const result = await withPromptSignal(pi, () => ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
       const container = new Container();
       container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
       container.addChild(new Text(theme.fg("accent", theme.bold("Select base branch"))));
@@ -677,7 +693,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
           tui.requestRender();
         },
       };
-    });
+    }));
 
     if (!result) return null;
     return { type: "baseBranch", branch: result };
@@ -700,7 +716,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
       description: "",
     }));
 
-    const result = await ctx.ui.custom<{ sha: string; title: string } | null>((tui, theme, _kb, done) => {
+    const result = await withPromptSignal(pi, () => ctx.ui.custom<{ sha: string; title: string } | null>((tui, theme, _kb, done) => {
       const container = new Container();
       container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
       container.addChild(new Text(theme.fg("accent", theme.bold("Select commit to review"))));
@@ -742,7 +758,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
           tui.requestRender();
         },
       };
-    });
+    }));
 
     if (!result) return null;
     return { type: "commit", sha: result.sha, title: result.title };
@@ -752,9 +768,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
    * Show custom instructions input
    */
   async function showCustomInput(ctx: ExtensionContext): Promise<ReviewTarget | null> {
-    const result = await ctx.ui.editor(
-      "Enter review instructions:",
-      "Review the code for security vulnerabilities and potential bugs...",
+    const result = await withPromptSignal(pi, () =>
+      ctx.ui.editor("Enter review instructions:", "Review the code for security vulnerabilities and potential bugs..."),
     );
 
     if (!result?.trim()) return null;
@@ -772,9 +787,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
    * Show folder input
    */
   async function showFolderInput(ctx: ExtensionContext): Promise<ReviewTarget | null> {
-    const result = await ctx.ui.editor(
-      "Enter folders/files to review (space-separated or one per line):",
-      ".",
+    const result = await withPromptSignal(pi, () =>
+      ctx.ui.editor("Enter folders/files to review (space-separated or one per line):", "."),
     );
 
     if (!result?.trim()) return null;
@@ -795,9 +809,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
     }
 
     // Get PR reference from user
-    const prRef = await ctx.ui.editor(
-      "Enter PR number or URL (e.g. 123 or https://github.com/owner/repo/pull/123):",
-      "",
+    const prRef = await withPromptSignal(pi, () =>
+      ctx.ui.editor("Enter PR number or URL (e.g. 123 or https://github.com/owner/repo/pull/123):", ""),
     );
 
     if (!prRef?.trim()) return null;
@@ -1080,7 +1093,9 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
         if (messageCount > 0) {
           // Existing session - ask user which mode they want
-          const choice = await ctx.ui.select("Start review in:", ["Empty branch", "Current session"]);
+          const choice = await withPromptSignal(pi, () =>
+            ctx.ui.select("Start review in:", ["Empty branch", "Current session"]),
+          );
 
           if (choice === undefined) {
             if (fromSelector) {
@@ -1190,11 +1205,9 @@ Instructions:
 
     endReviewInProgress = true;
     try {
-      const choice = await ctx.ui.select("Finish review:", [
-        "Return only",
-        "Return and fix findings",
-        "Return and summarize",
-      ]);
+      const choice = await withPromptSignal(pi, () =>
+        ctx.ui.select("Finish review:", ["Return only", "Return and fix findings", "Return and summarize"]),
+      );
 
       if (choice === undefined) {
         ctx.ui.notify("Cancelled. Use /end-review to try again.", "info");

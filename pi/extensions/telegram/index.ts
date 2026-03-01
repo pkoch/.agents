@@ -33,6 +33,22 @@ const CONFIG_DIR = path.join(AGENT_DIR, "telegram");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 const AUTO_CONNECT_INTERVAL_MS = 3_000;
 
+type PromptStatus = "completed" | "error";
+
+async function withPromptSignal<T>(pi: ExtensionAPI, run: () => Promise<T>): Promise<T> {
+  pi.events.emit("ui:prompt_start", { source: "telegram" });
+
+  let status: PromptStatus = "completed";
+  try {
+    return await run();
+  } catch (error) {
+    status = "error";
+    throw error;
+  } finally {
+    pi.events.emit("ui:prompt_end", { source: "telegram", status });
+  }
+}
+
 function sleep(ms: number, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -631,9 +647,8 @@ export default function (pi: ExtensionAPI) {
           if (!ctx.hasUI) {
             throw new Error(`Missing botToken. Create ${CONFIG_PATH} with {\"botToken\": \"...\"}.`);
           }
-          const token = await ctx.ui.input(
-            "Telegram bot token",
-            "Paste the bot token (saved to ~/.pi/agent/telegram/config.json)",
+          const token = await withPromptSignal(pi, () =>
+            ctx.ui.input("Telegram bot token", "Paste the bot token (saved to ~/.pi/agent/telegram/config.json)"),
           );
           if (!token) {
             notify("Cancelled.", "info");

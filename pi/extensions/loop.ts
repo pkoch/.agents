@@ -32,6 +32,22 @@ const LOOP_PRESETS = [
 
 const LOOP_STATE_ENTRY = "loop-state";
 
+type PromptStatus = "completed" | "error";
+
+async function withPromptSignal<T>(pi: ExtensionAPI, run: () => Promise<T>): Promise<T> {
+  pi.events.emit("ui:prompt_start", { source: "loop" });
+
+  let status: PromptStatus = "completed";
+  try {
+    return await run();
+  } catch (error) {
+    status = "error";
+    throw error;
+  } finally {
+    pi.events.emit("ui:prompt_end", { source: "loop", status });
+  }
+}
+
 const OPENAI_FAST_MODEL_ID = "gpt-5.3-codex-spark";
 const ANTHROPIC_FAST_MODEL_ID = "claude-haiku-4-5";
 
@@ -253,7 +269,7 @@ export default function loopExtension(pi: ExtensionAPI): void {
       description: preset.description,
     }));
 
-    const selection = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+    const selection = await withPromptSignal(pi, () => ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
       const container = new Container();
       container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
       container.addChild(new Text(theme.fg("accent", theme.bold("Select a loop preset"))));
@@ -285,7 +301,7 @@ export default function loopExtension(pi: ExtensionAPI): void {
           tui.requestRender();
         },
       };
-    });
+    }));
 
     if (!selection) return null;
 
@@ -295,7 +311,9 @@ export default function loopExtension(pi: ExtensionAPI): void {
       case "self":
         return { active: true, mode: "self", prompt: buildPrompt("self") };
       case "custom": {
-        const condition = await ctx.ui.editor("Enter loop breakout condition:", "");
+        const condition = await withPromptSignal(pi, () =>
+          ctx.ui.editor("Enter loop breakout condition:", ""),
+        );
         if (!condition?.trim()) return null;
         return {
           active: true,
@@ -375,7 +393,9 @@ export default function loopExtension(pi: ExtensionAPI): void {
 
       if (loopState.active) {
         const confirm = ctx.hasUI
-          ? await ctx.ui.confirm("Replace active loop?", "A loop is already active. Replace it?")
+          ? await withPromptSignal(pi, () =>
+            ctx.ui.confirm("Replace active loop?", "A loop is already active. Replace it?"),
+          )
           : true;
         if (!confirm) {
           ctx.ui.notify("Loop unchanged", "info");
@@ -404,9 +424,8 @@ export default function loopExtension(pi: ExtensionAPI): void {
     if (!loopState.active) return;
 
     if (ctx.hasUI && wasLastAssistantAborted(event.messages)) {
-      const confirm = await ctx.ui.confirm(
-        "Break active loop?",
-        "Operation aborted. Break out of the loop?",
+      const confirm = await withPromptSignal(pi, () =>
+        ctx.ui.confirm("Break active loop?", "Operation aborted. Break out of the loop?"),
       );
       if (confirm) {
         breakLoop(ctx);

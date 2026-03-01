@@ -41,6 +41,22 @@ const STATUS_KEY = "todo";
 const STATUS_SPINNER_INTERVAL_MS = 80;
 const STATUS_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
+type PromptStatus = "completed" | "error";
+
+async function withPromptSignal<T>(pi: ExtensionAPI, run: () => Promise<T>): Promise<T> {
+  pi.events.emit("ui:prompt_start", { source: "todo" });
+
+  let status: PromptStatus = "completed";
+  try {
+    return await run();
+  } catch (error) {
+    status = "error";
+    throw error;
+  } finally {
+    pi.events.emit("ui:prompt_end", { source: "todo", status });
+  }
+}
+
 const TODO_ACTIONS = [
   "list_active",
   "list_completed",
@@ -446,6 +462,7 @@ function maskToken(token: string): string {
 }
 
 async function resolveApiToken(
+  pi: ExtensionAPI,
   ctx: ExtensionContext,
   options: { allowPrompt: boolean; forcePrompt?: boolean },
 ): Promise<string | null> {
@@ -463,11 +480,13 @@ async function resolveApiToken(
     return resolved.token;
   }
 
-  const enteredToken = await ctx.ui.input(
-    "Todoist API token",
-    resolved.token
-      ? `Enter a replacement Todoist API token (stored in ${TODOIST_CONFIG_PATH})`
-      : `Paste your Todoist API token (stored in ${TODOIST_CONFIG_PATH})`,
+  const enteredToken = await withPromptSignal(pi, () =>
+    ctx.ui.input(
+      "Todoist API token",
+      resolved.token
+        ? `Enter a replacement Todoist API token (stored in ${TODOIST_CONFIG_PATH})`
+        : `Paste your Todoist API token (stored in ${TODOIST_CONFIG_PATH})`,
+    ),
   );
 
   if (!enteredToken?.trim()) {
@@ -924,6 +943,7 @@ async function fetchRemoteComments(token: string, todoistId: string): Promise<To
 }
 
 async function gatherTasks(
+  pi: ExtensionAPI,
   ctx: ExtensionContext,
   action: ListAction,
   options: { allowPrompt: boolean; operations?: OutboxOperation[] } = {
@@ -934,7 +954,7 @@ async function gatherTasks(
   const pendingOutbox = operations.length;
   const warnings: string[] = [];
   const wantCompleted = action === "list_all" || action === "list_completed";
-  const token = await resolveApiToken(ctx, { allowPrompt: options.allowPrompt });
+  const token = await resolveApiToken(pi, ctx, { allowPrompt: options.allowPrompt });
 
   let remoteActive: TodoTask[] = [];
   let remoteCompleted: TodoTask[] = [];
@@ -1126,6 +1146,7 @@ async function applyOutboxOperation(
 }
 
 async function syncOutbox(
+  pi: ExtensionAPI,
   ctx: ExtensionContext,
   options: { allowPrompt: boolean; notify: boolean },
 ): Promise<SyncReport> {
@@ -1156,7 +1177,7 @@ async function syncOutbox(
       runtimeState.authSyncBlocked = false;
     }
 
-    const token = await resolveApiToken(ctx, { allowPrompt: options.allowPrompt });
+    const token = await resolveApiToken(pi, ctx, { allowPrompt: options.allowPrompt });
     if (!token) {
       report.pending = operations.length;
       report.skipped = "missing-token";
@@ -1283,7 +1304,7 @@ async function syncOutbox(
   }
 }
 
-function startBackgroundSync(ctx: ExtensionContext): void {
+function startBackgroundSync(pi: ExtensionAPI, ctx: ExtensionContext): void {
   runtimeState.lastContext = ctx;
   if (!ctx.hasUI) return;
   if (runtimeState.syncTimer) return;
@@ -1293,7 +1314,7 @@ function startBackgroundSync(ctx: ExtensionContext): void {
     if (!activeCtx) return;
     if (!activeCtx.hasUI) return;
     if (!existsSync(getOutboxPath(activeCtx.cwd))) return;
-    void syncOutbox(activeCtx, { allowPrompt: false, notify: false }).catch(() => undefined);
+    void syncOutbox(pi, activeCtx, { allowPrompt: false, notify: false }).catch(() => undefined);
   }, SYNC_INTERVAL_MS);
 }
 
@@ -1303,9 +1324,9 @@ function stopBackgroundSync(): void {
   runtimeState.syncTimer = null;
 }
 
-function queueBackgroundSync(ctx: ExtensionContext): void {
+function queueBackgroundSync(pi: ExtensionAPI, ctx: ExtensionContext): void {
   if (!ctx.hasUI) return;
-  void syncOutbox(ctx, { allowPrompt: false, notify: false }).catch(() => undefined);
+  void syncOutbox(pi, ctx, { allowPrompt: false, notify: false }).catch(() => undefined);
 }
 
 function buildPendingWarning(): string {
@@ -1403,8 +1424,8 @@ function parseCommandArgs(args?: string): string[] {
     .filter(Boolean);
 }
 
-async function runSetup(ctx: ExtensionCommandContext): Promise<void> {
-  const token = await resolveApiToken(ctx, {
+async function runSetup(pi: ExtensionAPI, ctx: ExtensionCommandContext): Promise<void> {
+  const token = await resolveApiToken(pi, ctx, {
     allowPrompt: true,
     forcePrompt: runtimeState.authSyncBlocked,
   });
@@ -1416,7 +1437,7 @@ async function runSetup(ctx: ExtensionCommandContext): Promise<void> {
   runtimeState.authSyncBlocked = false;
   const syncResult = await withSpinnerStatus(ctx, "Setting up Todoist workspace...", async () => {
     await ensureWorkspace(token, ctx.cwd);
-    return syncOutbox(ctx, { allowPrompt: false, notify: false });
+    return syncOutbox(pi, ctx, { allowPrompt: false, notify: false });
   });
   const syncSummary = syncResult.pending
     ? `${syncResult.applied} applied, ${syncResult.pending} pending`
@@ -1429,13 +1450,14 @@ async function runSetup(ctx: ExtensionCommandContext): Promise<void> {
 }
 
 async function runListCommand(
+  pi: ExtensionAPI,
   ctx: ExtensionCommandContext,
   action: ListAction,
   filter?: (task: TodoTask) => boolean,
 ): Promise<void> {
   const result = await withSpinnerStatus(ctx, "Loading tasks...", async () => {
-    await syncOutbox(ctx, { allowPrompt: false, notify: false });
-    return gatherTasks(ctx, action, { allowPrompt: true });
+    await syncOutbox(pi, ctx, { allowPrompt: false, notify: false });
+    return gatherTasks(pi, ctx, action, { allowPrompt: true });
   });
   const tasks = filter ? result.tasks.filter(filter) : result.tasks;
   const output = formatTaskList(tasks);
@@ -1519,13 +1541,13 @@ async function runDoctor(ctx: ExtensionCommandContext): Promise<void> {
 export default function todosExtension(pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     runtimeState.lastContext = ctx;
-    startBackgroundSync(ctx);
-    void syncOutbox(ctx, { allowPrompt: false, notify: false });
+    startBackgroundSync(pi, ctx);
+    void syncOutbox(pi, ctx, { allowPrompt: false, notify: false });
   });
 
   pi.on("session_switch", async (_event, ctx) => {
     runtimeState.lastContext = ctx;
-    startBackgroundSync(ctx);
+    startBackgroundSync(pi, ctx);
   });
 
   pi.on("session_shutdown", async () => {
@@ -1556,18 +1578,18 @@ export default function todosExtension(pi: ExtensionAPI) {
 
       const enqueueAndRespond = async (operation: OutboxOperation, taskIdForResponse?: string) => {
         const pendingOutbox = await appendOutboxOperation(ctx.cwd, operation);
-        queueBackgroundSync(ctx);
+        queueBackgroundSync(pi, ctx);
 
         let task: TodoTask | undefined;
         if (operation.type === "create") {
           task = createLocalTask(operation);
         } else if (taskIdForResponse) {
-          const gathered = await gatherTasks(ctx, "list_all", { allowPrompt: false });
+          const gathered = await gatherTasks(pi, ctx, "list_all", { allowPrompt: false });
           task = findTaskInList(gathered.tasks, taskIdForResponse);
         }
 
         const warnings: string[] = [buildPendingWarning()];
-        const token = await resolveApiToken(ctx, { allowPrompt: false });
+        const token = await resolveApiToken(pi, ctx, { allowPrompt: false });
         if (!token) {
           warnings.push("Todoist token not configured yet. Sync will start once a token is available.");
         }
@@ -1645,8 +1667,8 @@ export default function todosExtension(pi: ExtensionAPI) {
         case "list_active":
         case "list_completed":
         case "list_all": {
-          await syncOutbox(ctx, { allowPrompt: false, notify: false });
-          const gathered = await gatherTasks(ctx, action, { allowPrompt: true });
+          await syncOutbox(pi, ctx, { allowPrompt: false, notify: false });
+          const gathered = await gatherTasks(pi, ctx, action, { allowPrompt: true });
           return {
             content: [{ type: "text", text: serializeTaskListForAgent(gathered.tasks) }],
             details: {
@@ -1664,9 +1686,9 @@ export default function todosExtension(pi: ExtensionAPI) {
           const parsed = normalizeTaskId(params.id);
           if ("error" in parsed) return fail(parsed.error);
 
-          await syncOutbox(ctx, { allowPrompt: false, notify: false });
+          await syncOutbox(pi, ctx, { allowPrompt: false, notify: false });
           const operations = await readOutbox(ctx.cwd);
-          const gathered = await gatherTasks(ctx, "list_all", {
+          const gathered = await gatherTasks(pi, ctx, "list_all", {
             allowPrompt: true,
             operations,
           });
@@ -1675,7 +1697,7 @@ export default function todosExtension(pi: ExtensionAPI) {
             return fail(`Task ${parsed.id} not found`, gathered.warnings);
           }
 
-          const token = await resolveApiToken(ctx, { allowPrompt: false });
+          const token = await resolveApiToken(pi, ctx, { allowPrompt: false });
           let comments: TodoComment[] = [];
           if (token) {
             const rawTodoistId = getTodoistRawId(task.id);
@@ -1809,14 +1831,14 @@ export default function todosExtension(pi: ExtensionAPI) {
 
     if (first === "setup") {
       if (!ensureNoArgs("setup")) return;
-      await runSetup(ctx);
+      await runSetup(pi, ctx);
       return;
     }
 
     if (first === "sync") {
       if (!ensureNoArgs("sync")) return;
       const report = await withSpinnerStatus(ctx, "Syncing Todoist outbox...", async () =>
-        syncOutbox(ctx, { allowPrompt: true, notify: true }),
+        syncOutbox(pi, ctx, { allowPrompt: true, notify: true }),
       );
       if (!ctx.hasUI) {
         const line = `applied=${report.applied} dropped=${report.dropped} pending=${report.pending}`;
@@ -1834,6 +1856,7 @@ export default function todosExtension(pi: ExtensionAPI) {
     if (first === "active") {
       if (!ensureNoArgs("active")) return;
       await runListCommand(
+        pi,
         ctx,
         "list_active",
         (task) => task.status === "active" && task.labels.includes(PI_ACTIVE_LABEL),
@@ -1844,6 +1867,7 @@ export default function todosExtension(pi: ExtensionAPI) {
     if (first === "pending") {
       if (!ensureNoArgs("pending")) return;
       await runListCommand(
+        pi,
         ctx,
         "list_active",
         (task) => task.status === "active" && !task.labels.includes(PI_ACTIVE_LABEL),
@@ -1853,13 +1877,13 @@ export default function todosExtension(pi: ExtensionAPI) {
 
     if (first === "completed") {
       if (!ensureNoArgs("completed")) return;
-      await runListCommand(ctx, "list_completed");
+      await runListCommand(pi, ctx, "list_completed");
       return;
     }
 
     if (first === "all") {
       if (!ensureNoArgs("all")) return;
-      await runListCommand(ctx, "list_all");
+      await runListCommand(pi, ctx, "list_all");
       return;
     }
 

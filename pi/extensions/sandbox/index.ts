@@ -100,6 +100,22 @@ const DEFAULT_CONFIG: SandboxConfig = {
 
 const STATUS_KEY = "sandbox";
 
+type PromptStatus = "completed" | "error";
+
+async function withPromptSignal<T>(pi: ExtensionAPI, run: () => Promise<T>): Promise<T> {
+  pi.events.emit("ui:prompt_start", { source: "sandbox" });
+
+  let status: PromptStatus = "completed";
+  try {
+    return await run();
+  } catch (error) {
+    status = "error";
+    throw error;
+  } finally {
+    pi.events.emit("ui:prompt_end", { source: "sandbox", status });
+  }
+}
+
 type UiLevel = "info" | "warning" | "error";
 
 type ListOp = "add" | "remove";
@@ -443,6 +459,7 @@ function formatFilesystemViolationSummary(violation: FilesystemViolation): strin
 }
 
 async function handleFilesystemViolation(options: {
+  pi: ExtensionAPI;
   ctx: ExtensionContext | null;
   promptMode: PromptMode;
   runtimeConfig: SandboxRuntimeConfig;
@@ -452,7 +469,7 @@ async function handleFilesystemViolation(options: {
   pendingPrompts?: Map<string, Promise<string | null>>;
   applyRuntimeConfigForSession?: (ctx: ExtensionContext, runtimeConfig: SandboxRuntimeConfig) => void;
 }): Promise<string | null> {
-  const { ctx, promptMode, runtimeConfig, output, command, cwd, pendingPrompts, applyRuntimeConfigForSession } = options;
+  const { pi, ctx, promptMode, runtimeConfig, output, command, cwd, pendingPrompts, applyRuntimeConfigForSession } = options;
   const violation = detectFilesystemViolation(output);
   if (!violation) return null;
 
@@ -486,7 +503,9 @@ async function handleFilesystemViolation(options: {
               ? `access to ${violation.path}`
               : "access";
 
-      const approved = await ctx.ui.confirm(`Sandbox blocked filesystem ${target}`, "Allow for this session?");
+      const approved = await withPromptSignal(pi, () =>
+        ctx.ui.confirm(`Sandbox blocked filesystem ${target}`, "Allow for this session?"),
+      );
       if (!approved) return null;
 
       const nextConfig = cloneRuntimeConfig(runtimeConfig);
@@ -516,6 +535,7 @@ async function handleFilesystemViolation(options: {
 }
 
 interface SandboxedBashOpsOptions {
+  pi: ExtensionAPI;
   getContext: () => ExtensionContext | null;
   getRuntimeConfig: () => SandboxRuntimeConfig | null;
   getPromptMode: () => PromptMode;
@@ -551,7 +571,7 @@ function safeCleanupAfterCommand(): void {
 }
 
 function createSandboxedBashOps(options: SandboxedBashOpsOptions): BashOperations {
-  const { getContext, getRuntimeConfig, getPromptMode, getCwd, applyRuntimeConfigForSession } = options;
+  const { pi, getContext, getRuntimeConfig, getPromptMode, getCwd, applyRuntimeConfigForSession } = options;
   const pendingFilesystemPrompts = new Map<string, Promise<string | null>>();
 
   let executionQueue: Promise<void> = Promise.resolve();
@@ -669,6 +689,7 @@ function createSandboxedBashOps(options: SandboxedBashOpsOptions): BashOperation
 
             if (runtimeConfig) {
               const advice = await handleFilesystemViolation({
+                pi,
                 ctx: getContext(),
                 promptMode: getPromptMode(),
                 runtimeConfig,
@@ -798,7 +819,9 @@ export default function (pi: ExtensionAPI) {
           }
 
           const target = port ? `${normalizedHost}:${port}` : normalizedHost;
-          const approved = await ctx.ui.confirm(`Sandbox blocked network access to ${target}`, "Allow for this session?");
+          const approved = await withPromptSignal(pi, () =>
+            ctx.ui.confirm(`Sandbox blocked network access to ${target}`, "Allow for this session?"),
+          );
           if (!approved) return false;
 
           const latestConfig = getStateRuntimeConfig(sandboxState);
@@ -860,6 +883,7 @@ export default function (pi: ExtensionAPI) {
   };
 
   const sandboxedOps = createSandboxedBashOps({
+    pi,
     getContext: () => sessionContext,
     getRuntimeConfig: () => getStateRuntimeConfig(sandboxState),
     getPromptMode: () => promptMode,

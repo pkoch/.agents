@@ -3,6 +3,7 @@
  *
  * - Shows project/session in the terminal title
  * - Shows a braille spinner in the title while the agent is working
+ * - Shows a ? marker while an extension prompt is waiting for input
  * - Updates title with the current tool name during tool execution
  * - Pulses Ghostty's native progress bar while working
  */
@@ -21,6 +22,8 @@ let isWorking = false;
 let frameIndex = 0;
 let spinnerTimer: ReturnType<typeof setInterval> | undefined;
 let completionTimer: ReturnType<typeof setTimeout> | undefined;
+let pendingPromptCount = 0;
+let latestCtx: ExtensionContext | undefined;
 
 function ghosttyWrite(seq: string): void {
   try {
@@ -58,8 +61,40 @@ function currentFrame(): string {
   return STATUS_SPINNER_FRAMES[frameIndex % STATUS_SPINNER_FRAMES.length];
 }
 
+function hasPendingPrompts(): boolean {
+  return pendingPromptCount > 0;
+}
+
 function renderWorkingTitle(ctx: ExtensionContext): void {
   ctx.ui.setTitle(buildTitle(currentTool, currentFrame()));
+}
+
+function renderPromptTitle(ctx: ExtensionContext): void {
+  const extra = isWorking ? currentTool : undefined;
+  ctx.ui.setTitle(buildTitle(extra, "?"));
+}
+
+function renderActiveTitle(ctx: ExtensionContext): void {
+  if (hasPendingPrompts()) {
+    renderPromptTitle(ctx);
+    return;
+  }
+
+  if (isWorking) {
+    renderWorkingTitle(ctx);
+    return;
+  }
+
+  ctx.ui.setTitle(buildTitle());
+}
+
+function startSpinnerTimer(ctx: ExtensionContext): void {
+  clearSpinnerTimer();
+  spinnerTimer = setInterval(() => {
+    if (!isWorking || hasPendingPrompts()) return;
+    frameIndex = (frameIndex + 1) % STATUS_SPINNER_FRAMES.length;
+    renderWorkingTitle(ctx);
+  }, STATUS_SPINNER_INTERVAL_MS);
 }
 
 function startSpinner(ctx: ExtensionContext): void {
@@ -70,19 +105,24 @@ function startSpinner(ctx: ExtensionContext): void {
   currentTool = undefined;
   frameIndex = 0;
 
-  setProgress(3);
-  renderWorkingTitle(ctx);
+  setProgress(hasPendingPrompts() ? 0 : 3);
+  renderActiveTitle(ctx);
 
-  spinnerTimer = setInterval(() => {
-    frameIndex = (frameIndex + 1) % STATUS_SPINNER_FRAMES.length;
-    renderWorkingTitle(ctx);
-  }, STATUS_SPINNER_INTERVAL_MS);
+  if (!hasPendingPrompts()) {
+    startSpinnerTimer(ctx);
+  }
 }
 
 function stopSpinner(ctx: ExtensionContext): void {
   isWorking = false;
   currentTool = undefined;
   clearSpinnerTimer();
+
+  if (hasPendingPrompts()) {
+    setProgress(0);
+    renderActiveTitle(ctx);
+    return;
+  }
 
   setProgress(1, 100);
   ctx.ui.setTitle(buildTitle());
@@ -94,47 +134,93 @@ function stopSpinner(ctx: ExtensionContext): void {
   }, COMPLETION_FLASH_MS);
 }
 
-function syncSessionTitle(ctx: ExtensionContext): void {
-  if (isWorking) {
-    renderWorkingTitle(ctx);
+function handlePromptStart(ctx: ExtensionContext): void {
+  clearCompletionTimer();
+  clearSpinnerTimer();
+  setProgress(0);
+  renderActiveTitle(ctx);
+}
+
+function handlePromptEnd(ctx: ExtensionContext): void {
+  if (hasPendingPrompts()) {
+    renderActiveTitle(ctx);
     return;
   }
-  ctx.ui.setTitle(buildTitle());
+
+  clearCompletionTimer();
+
+  if (isWorking) {
+    setProgress(3);
+    renderWorkingTitle(ctx);
+    startSpinnerTimer(ctx);
+    return;
+  }
+
+  renderActiveTitle(ctx);
+}
+
+function syncSessionTitle(ctx: ExtensionContext): void {
+  renderActiveTitle(ctx);
 }
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     if (!ctx.hasUI) return;
+    latestCtx = ctx;
     sessionName = pi.getSessionName();
     syncSessionTitle(ctx);
   });
 
   pi.on("session_switch", async (_event, ctx) => {
     if (!ctx.hasUI) return;
+    latestCtx = ctx;
     sessionName = pi.getSessionName();
     syncSessionTitle(ctx);
   });
 
   pi.on("agent_start", async (_event, ctx) => {
     if (!ctx.hasUI) return;
+    latestCtx = ctx;
     startSpinner(ctx);
   });
 
   pi.on("agent_end", async (_event, ctx) => {
     if (!ctx.hasUI) return;
+    latestCtx = ctx;
     stopSpinner(ctx);
   });
 
   pi.on("tool_execution_start", async (event, ctx) => {
     currentTool = event.toolName;
-    if (!ctx.hasUI || !isWorking) return;
-    renderWorkingTitle(ctx);
+    if (!ctx.hasUI) return;
+    latestCtx = ctx;
+    if (!isWorking) return;
+    renderActiveTitle(ctx);
   });
 
   pi.on("tool_execution_end", async (_event, ctx) => {
     currentTool = undefined;
-    if (!ctx.hasUI || !isWorking) return;
-    renderWorkingTitle(ctx);
+    if (!ctx.hasUI) return;
+    latestCtx = ctx;
+    if (!isWorking) return;
+    renderActiveTitle(ctx);
+  });
+
+  pi.events.on("ui:prompt_start", () => {
+    pendingPromptCount += 1;
+
+    const ctx = latestCtx;
+    if (!ctx || !ctx.hasUI) return;
+    handlePromptStart(ctx);
+  });
+
+  pi.events.on("ui:prompt_end", () => {
+    if (pendingPromptCount === 0) return;
+    pendingPromptCount -= 1;
+
+    const ctx = latestCtx;
+    if (!ctx || !ctx.hasUI) return;
+    handlePromptEnd(ctx);
   });
 
   pi.on("session_shutdown", async (_event, _ctx) => {
@@ -142,6 +228,8 @@ export default function (pi: ExtensionAPI) {
     clearCompletionTimer();
     isWorking = false;
     currentTool = undefined;
+    pendingPromptCount = 0;
+    latestCtx = undefined;
     setProgress(0);
   });
 }

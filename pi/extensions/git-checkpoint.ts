@@ -7,6 +7,22 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
+type PromptStatus = "completed" | "error";
+
+async function withPromptSignal<T>(pi: ExtensionAPI, run: () => Promise<T>): Promise<T> {
+  pi.events.emit("ui:prompt_start", { source: "git-checkpoint" });
+
+  let status: PromptStatus = "completed";
+  try {
+    return await run();
+  } catch (error) {
+    status = "error";
+    throw error;
+  } finally {
+    pi.events.emit("ui:prompt_end", { source: "git-checkpoint", status });
+  }
+}
+
 export default function (pi: ExtensionAPI) {
   const checkpoints = new Map<string, string>();
   let currentEntryId: string | undefined;
@@ -35,10 +51,9 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    const choice = await ctx.ui.select("Restore code state?", [
-      "Yes, restore code to that point",
-      "No, keep current code",
-    ]);
+    const choice = await withPromptSignal(pi, () =>
+      ctx.ui.select("Restore code state?", ["Yes, restore code to that point", "No, keep current code"]),
+    );
 
     if (choice?.startsWith("Yes")) {
       await pi.exec("git", ["stash", "apply", ref]);

@@ -1,7 +1,9 @@
 /**
  * Pi Notify Extension
  *
- * Sends a native terminal notification when Pi agent is done and waiting for input.
+ * Sends native terminal notifications when Pi is waiting for input.
+ * - Agent finished and ready for the next prompt
+ * - Extension prompt is waiting for a question/confirmation answer
  * Supports multiple terminal protocols:
  * - OSC 777: Ghostty, iTerm2, WezTerm, rxvt-unicode
  * - OSC 99: Kitty
@@ -48,8 +50,37 @@ function notify(title: string, body: string): void {
   }
 }
 
+function getPromptSource(event: unknown): string | undefined {
+  if (!event || typeof event !== "object") return undefined;
+  const source = (event as Record<string, unknown>).source;
+  if (typeof source !== "string") return undefined;
+  const trimmed = source.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export default function (pi: ExtensionAPI) {
+  let pendingPromptCount = 0;
+
+  pi.events.on("ui:prompt_start", (data) => {
+    const wasIdle = pendingPromptCount === 0;
+    pendingPromptCount += 1;
+
+    if (!wasIdle) return;
+    const source = getPromptSource(data);
+    notify("Pi", source ? `Question pending (${source})` : "Question pending");
+  });
+
+  pi.events.on("ui:prompt_end", () => {
+    if (pendingPromptCount === 0) return;
+    pendingPromptCount -= 1;
+  });
+
   pi.on("agent_end", async () => {
+    if (pendingPromptCount > 0) return;
     notify("Pi", "Ready for input");
+  });
+
+  pi.on("session_shutdown", async () => {
+    pendingPromptCount = 0;
   });
 }
