@@ -18,7 +18,7 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder } from "@mariozechner/pi-coding-agent";
 import { Container, type SelectItem, SelectList, Text, matchesKey } from "@mariozechner/pi-tui";
-import { spawn, execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -122,11 +122,18 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
-function getTerminalFlag(pi: ExtensionAPI): string | undefined {
-  const value = pi.getFlag(`--${TERMINAL_FLAG}`);
+function getStringFlag(pi: ExtensionAPI, name: string): string | undefined {
+  const value = pi.getFlag(`--${name}`);
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function notifyManualSessionResume(ctx: ExtensionCommandContext, command: string): void {
+  if (!ctx.hasUI) return;
+
+  ctx.ui.notify("Open a new terminal window or split, then paste", "info");
+  ctx.ui.notify(command, "info");
 }
 
 function renderTerminalCommand(template: string, cwd: string): string {
@@ -980,54 +987,6 @@ function spawnDetached(command: string, args: string[], onError?: (error: Error)
   if (onError) child.on("error", onError);
 }
 
-function ghosttyAvailable(): boolean {
-  if (process.platform === "darwin") {
-    return (
-      fs.existsSync("/Applications/Ghostty.app") ||
-      fs.existsSync(`${process.env.HOME}/Applications/Ghostty.app`)
-    );
-  }
-  try {
-    execFileSync("which", ["ghostty"], { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function spawnGhosttyFresh(cwd: string, onError?: (error: Error) => void): void {
-  const piCommand = "exec pi";
-
-  if (process.platform === "darwin") {
-    const envPath = process.env.PATH;
-    const args: string[] = ["-n", "-a", "Ghostty"];
-
-    if (envPath) {
-      args.push("--env", `PATH=${envPath}`);
-    }
-
-    args.push(
-      "--args",
-      "--window-save-state=never",
-      "-e",
-      "bash",
-      "-lc",
-      `cd "$1" && ${piCommand}`,
-      "--",
-      cwd,
-    );
-
-    spawnDetached("open", args, onError);
-    return;
-  }
-
-  spawnDetached(
-    "ghostty",
-    ["-e", "bash", "-lc", `cd "$1" && ${piCommand}`, "--", cwd],
-    onError,
-  );
-}
-
 async function openSessionInDirectory(
   pi: ExtensionAPI,
   ctx: ExtensionCommandContext,
@@ -1037,13 +996,13 @@ async function openSessionInDirectory(
 
   const manualHint = `cd ${shellQuote(targetPath)} && pi`;
 
-  const terminalFlag = getTerminalFlag(pi);
+  const terminalFlag = getStringFlag(pi, TERMINAL_FLAG);
   if (terminalFlag) {
     const command = renderTerminalCommand(terminalFlag, targetPath);
     spawnDetached("bash", ["-lc", command], (error) => {
       if (ctx.hasUI) {
         ctx.ui.notify(`Terminal command failed: ${error.message}`, "warning");
-        ctx.ui.notify(`Run manually: ${manualHint}`, "info");
+        notifyManualSessionResume(ctx, manualHint);
       }
     });
     ctx.ui.notify("Opened new session in custom terminal", "info");
@@ -1061,25 +1020,15 @@ async function openSessionInDirectory(
     ]);
     if (result.code !== 0) {
       ctx.ui.notify(`tmux failed: ${result.stderr || result.stdout || "unknown error"}`, "warning");
-      ctx.ui.notify(`Run manually: ${manualHint}`, "info");
+      notifyManualSessionResume(ctx, manualHint);
       return;
     }
+
     ctx.ui.notify("Opened new session in tmux window", "info");
     return;
   }
 
-  if (ghosttyAvailable()) {
-    spawnGhosttyFresh(targetPath, (error) => {
-      if (ctx.hasUI) {
-        ctx.ui.notify(`Ghostty failed to open: ${error.message}`, "warning");
-        ctx.ui.notify(`Run manually: ${manualHint}`, "info");
-      }
-    });
-    ctx.ui.notify("Opened new session in Ghostty window", "info");
-    return;
-  }
-
-  ctx.ui.notify(`Open a new session: ${manualHint}`, "info");
+  notifyManualSessionResume(ctx, manualHint);
 }
 
 async function handleNew(pi: ExtensionAPI, ctx: ExtensionCommandContext, args: string): Promise<void> {

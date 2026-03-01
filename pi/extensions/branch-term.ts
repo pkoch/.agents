@@ -1,6 +1,5 @@
-import { spawn, execFileSync } from "node:child_process"
-import * as fs from "node:fs"
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
+import { spawn } from "node:child_process"
+import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
 import { SessionManager } from "@mariozechner/pi-coding-agent"
 
 const TERMINAL_FLAG = "branch-term"
@@ -43,52 +42,11 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`
 }
 
-function ghosttyAvailable(): boolean {
-  if (process.platform === "darwin") {
-    return (
-      fs.existsSync("/Applications/Ghostty.app") ||
-      fs.existsSync(`${process.env.HOME}/Applications/Ghostty.app`)
-    )
-  }
-  try {
-    execFileSync("which", ["ghostty"], { stdio: "ignore" })
-    return true
-  } catch {
-    return false
-  }
-}
+function notifyManualResume(ctx: ExtensionCommandContext, command: string): void {
+  if (!ctx.hasUI) return
 
-function spawnGhostty(sessionFile: string, cwd: string, onError?: (error: Error) => void): void {
-  const piCommand = `exec pi --session ${shellQuote(sessionFile)}`
-
-  if (process.platform === "darwin") {
-    const envPath = process.env.PATH
-    const args: string[] = ["-n", "-a", "Ghostty"]
-
-    if (envPath) {
-      args.push("--env", `PATH=${envPath}`)
-    }
-
-    args.push(
-      "--args",
-      "--window-save-state=never",
-      "-e",
-      "bash",
-      "-lc",
-      `cd "$1" && ${piCommand}`,
-      "--",
-      cwd,
-    )
-
-    spawnDetached("open", args, onError)
-    return
-  }
-
-  spawnDetached(
-    "ghostty",
-    ["-e", "bash", "-lc", `cd "$1" && ${piCommand}`, "--", cwd],
-    onError,
-  )
+  ctx.ui.notify("Open a new terminal window or split, then paste", "info")
+  ctx.ui.notify(command, "info")
 }
 
 export default function (pi: ExtensionAPI) {
@@ -99,7 +57,7 @@ export default function (pi: ExtensionAPI) {
   })
 
   pi.registerCommand("branch", {
-    description: "Fork current session into a new terminal",
+    description: "Fork current session into tmux or show a resume command",
     handler: async (_args, ctx) => {
       await ctx.waitForIdle()
 
@@ -121,13 +79,16 @@ export default function (pi: ExtensionAPI) {
         throw new Error("Failed to create branched session")
       }
 
-      const manualHint = `pi --session ${forkFile}`
+      const resumeCommand = `cd ${shellQuote(ctx.cwd)} && pi --session ${shellQuote(forkFile)}`
 
       const terminalFlag = getTerminalFlag(pi)
       if (terminalFlag) {
         const command = renderTerminalCommand(terminalFlag, ctx.cwd, forkFile)
         spawnDetached("bash", ["-lc", command], (error) => {
-          if (ctx.hasUI) ctx.ui.notify(`Terminal command failed: ${error.message}`, "error")
+          if (ctx.hasUI) {
+            ctx.ui.notify(`Terminal command failed: ${error.message}`, "error")
+            notifyManualResume(ctx, resumeCommand)
+          }
         })
         if (ctx.hasUI) ctx.ui.notify("Opened fork in new terminal", "info")
         return
@@ -145,24 +106,18 @@ export default function (pi: ExtensionAPI) {
           forkFile,
         ])
         if (result.code !== 0) {
-          throw new Error(result.stderr || result.stdout || "tmux new-window failed")
+          if (ctx.hasUI) {
+            const details = result.stderr || result.stdout || "tmux command failed"
+            ctx.ui.notify(`tmux failed: ${details}`, "warning")
+            notifyManualResume(ctx, resumeCommand)
+          }
+          return
         }
         if (ctx.hasUI) ctx.ui.notify("Opened fork in new tmux window", "info")
         return
       }
 
-      if (ghosttyAvailable()) {
-        spawnGhostty(forkFile, ctx.cwd, (error) => {
-          if (ctx.hasUI) {
-            ctx.ui.notify(`Ghostty failed to open: ${error.message}`, "warning")
-            ctx.ui.notify(`Run: ${manualHint}`, "info")
-          }
-        })
-        if (ctx.hasUI) ctx.ui.notify("Opened fork in new Ghostty window", "info")
-        return
-      }
-
-      if (ctx.hasUI) ctx.ui.notify(`Run: ${manualHint}`, "info")
+      notifyManualResume(ctx, resumeCommand)
     },
   })
 }
