@@ -1,4 +1,5 @@
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
+import * as path from "node:path"
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
 import { SessionManager } from "@mariozechner/pi-coding-agent"
 
@@ -97,11 +98,85 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`
 }
 
+function escapeForDoubleQuotes(value: string): string {
+  return value.replace(/(["\\$`!])/g, "\\$1")
+}
+
+function shellQuoteCompact(value: string): string {
+  const home = process.env.HOME
+  if (!home) return shellQuote(value)
+
+  if (value === home) return "$HOME"
+
+  if (value.startsWith(`${home}/`)) {
+    const suffix = value.slice(home.length + 1)
+    return `"$HOME/${escapeForDoubleQuotes(suffix)}"`
+  }
+
+  return shellQuote(value)
+}
+
+function parseSessionIdFromFile(sessionFile: string): string | undefined {
+  const fileName = path.basename(sessionFile, ".jsonl")
+  const separatorIndex = fileName.lastIndexOf("_")
+  if (separatorIndex <= 0) return undefined
+
+  const candidate = fileName.slice(separatorIndex + 1)
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidate)
+    ? candidate
+    : undefined
+}
+
+function formatResumeSessionArgument(sessionFile: string): string {
+  const sessionId = parseSessionIdFromFile(sessionFile)
+  if (sessionId) return sessionId
+
+  return shellQuoteCompact(sessionFile)
+}
+
+function runClipboardCommand(command: string, args: string[], text: string): boolean {
+  try {
+    const result = spawnSync(command, args, {
+      input: text,
+      stdio: ["pipe", "ignore", "ignore"],
+      timeout: 3000,
+    })
+    return result.status === 0
+  } catch {
+    return false
+  }
+}
+
+function copyToClipboard(text: string): boolean {
+  if (process.platform === "darwin") {
+    return runClipboardCommand("pbcopy", [], text)
+  }
+
+  if (process.platform === "win32") {
+    return runClipboardCommand("clip", [], text)
+  }
+
+  if (process.platform === "linux") {
+    return (
+      runClipboardCommand("wl-copy", [], text) ||
+      runClipboardCommand("xclip", ["-selection", "clipboard"], text) ||
+      runClipboardCommand("xsel", ["--clipboard", "--input"], text)
+    )
+  }
+
+  return false
+}
+
 function notifyManualResume(ctx: ExtensionCommandContext, command: string): void {
   if (!ctx.hasUI) return
 
-  ctx.ui.notify("Open a new terminal window or split, then paste", "info")
-  ctx.ui.notify(command, "info")
+  const copied = copyToClipboard(command)
+  const hint = copied
+    ? "Paste in a new terminal/split (copied to clipboard):"
+    : "Copy and paste in a new terminal/split:"
+
+  ctx.ui.notify(hint, "info")
+  ctx.ui.notify(ctx.ui.theme.fg("text", command), "info")
 }
 
 export default function (pi: ExtensionAPI) {
@@ -146,7 +221,7 @@ export default function (pi: ExtensionAPI) {
         throw new Error("Failed to create branched session")
       }
 
-      const resumeCommand = `cd ${shellQuote(ctx.cwd)} && pi --session ${shellQuote(forkFile)}`
+      const resumeCommand = `cd ${shellQuoteCompact(ctx.cwd)} && pi --session ${formatResumeSessionArgument(forkFile)}`
 
       const terminalFlag = getStringFlag(pi, TERMINAL_FLAG)
       if (terminalFlag) {

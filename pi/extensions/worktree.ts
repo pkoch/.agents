@@ -18,7 +18,7 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder } from "@mariozechner/pi-coding-agent";
 import { Container, type SelectItem, SelectList, Text, matchesKey } from "@mariozechner/pi-tui";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -145,6 +145,57 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+function escapeForDoubleQuotes(value: string): string {
+  return value.replace(/(["\\$`!])/g, "\\$1");
+}
+
+function shellQuoteCompact(value: string): string {
+  const home = process.env.HOME;
+  if (!home) return shellQuote(value);
+
+  if (value === home) return "$HOME";
+
+  if (value.startsWith(`${home}/`)) {
+    const suffix = value.slice(home.length + 1);
+    return `"$HOME/${escapeForDoubleQuotes(suffix)}"`;
+  }
+
+  return shellQuote(value);
+}
+
+function runClipboardCommand(command: string, args: string[], text: string): boolean {
+  try {
+    const result = spawnSync(command, args, {
+      input: text,
+      stdio: ["pipe", "ignore", "ignore"],
+      timeout: 3000,
+    });
+    return result.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+function copyToClipboard(text: string): boolean {
+  if (process.platform === "darwin") {
+    return runClipboardCommand("pbcopy", [], text);
+  }
+
+  if (process.platform === "win32") {
+    return runClipboardCommand("clip", [], text);
+  }
+
+  if (process.platform === "linux") {
+    return (
+      runClipboardCommand("wl-copy", [], text) ||
+      runClipboardCommand("xclip", ["-selection", "clipboard"], text) ||
+      runClipboardCommand("xsel", ["--clipboard", "--input"], text)
+    );
+  }
+
+  return false;
+}
+
 function getStringFlag(pi: ExtensionAPI, name: string): string | undefined {
   const value = pi.getFlag(`--${name}`);
   if (typeof value !== "string") return undefined;
@@ -161,11 +212,16 @@ function parseTmuxLayout(value: string | undefined): TmuxLayout | undefined {
   return undefined;
 }
 
-function notifyManualSessionResume(ctx: ExtensionCommandContext, command: string): void {
+function notifyManualResume(ctx: ExtensionCommandContext, command: string): void {
   if (!ctx.hasUI) return;
 
-  ctx.ui.notify("Open a new terminal window or split, then paste", "info");
-  ctx.ui.notify(command, "info");
+  const copied = copyToClipboard(command);
+  const hint = copied
+    ? "Paste in a new terminal/split (copied to clipboard):"
+    : "Copy and paste in a new terminal/split:";
+
+  ctx.ui.notify(hint, "info");
+  ctx.ui.notify(ctx.ui.theme.fg("text", command), "info");
 }
 
 function renderTerminalCommand(template: string, cwd: string): string {
@@ -1027,7 +1083,7 @@ async function openSessionInDirectory(
 ): Promise<void> {
   if (!ctx.hasUI) return;
 
-  const manualHint = `cd ${shellQuote(targetPath)} && pi`;
+  const manualHint = `cd ${shellQuoteCompact(targetPath)} && pi`;
 
   const terminalFlag = getStringFlag(pi, TERMINAL_FLAG);
   if (terminalFlag) {
@@ -1035,7 +1091,7 @@ async function openSessionInDirectory(
     spawnDetached("bash", ["-lc", command], (error) => {
       if (ctx.hasUI) {
         ctx.ui.notify(`Terminal command failed: ${error.message}`, "warning");
-        notifyManualSessionResume(ctx, manualHint);
+        notifyManualResume(ctx, manualHint);
       }
     });
     ctx.ui.notify("Opened new session in custom terminal", "info");
@@ -1058,7 +1114,7 @@ async function openSessionInDirectory(
     const result = await pi.exec("tmux", layoutConfig.commandArgs(targetPath, "pi"));
     if (result.code !== 0) {
       ctx.ui.notify(`tmux failed: ${result.stderr || result.stdout || "unknown error"}`, "warning");
-      notifyManualSessionResume(ctx, manualHint);
+      notifyManualResume(ctx, manualHint);
       return;
     }
 
@@ -1066,7 +1122,7 @@ async function openSessionInDirectory(
     return;
   }
 
-  notifyManualSessionResume(ctx, manualHint);
+  notifyManualResume(ctx, manualHint);
 }
 
 async function handleNew(pi: ExtensionAPI, ctx: ExtensionCommandContext, args: string): Promise<void> {
