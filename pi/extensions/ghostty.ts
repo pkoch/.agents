@@ -6,6 +6,7 @@
  * - Shows a ? marker while an extension prompt is waiting for input
  * - Updates title with the current tool name during tool execution
  * - Pulses Ghostty's native progress bar while working
+ * - Treats background /review runs as working state via review:start/review:end events
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
@@ -15,6 +16,8 @@ import path from "node:path";
 const STATUS_SPINNER_INTERVAL_MS = 80;
 const STATUS_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const COMPLETION_FLASH_MS = 800;
+const REVIEW_EVENT_START = "review:start";
+const REVIEW_EVENT_END = "review:end";
 
 let sessionName: string | undefined;
 let currentTool: string | undefined;
@@ -24,6 +27,8 @@ let spinnerTimer: ReturnType<typeof setInterval> | undefined;
 let completionTimer: ReturnType<typeof setTimeout> | undefined;
 let pendingPromptCount = 0;
 let latestCtx: ExtensionContext | undefined;
+let currentSessionKey: string | undefined;
+const activeReviewSessions = new Set<string>();
 
 function ghosttyWrite(seq: string): void {
   try {
@@ -65,12 +70,39 @@ function hasPendingPrompts(): boolean {
   return pendingPromptCount > 0;
 }
 
+function getSessionKey(ctx: ExtensionContext): string {
+  return ctx.sessionManager.getSessionFile() ?? `session:${ctx.sessionManager.getSessionId()}`;
+}
+
+function extractReviewSessionKey(data: unknown): string | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const payload = data as { sessionKey?: unknown };
+  if (typeof payload.sessionKey !== "string") return undefined;
+  const sessionKey = payload.sessionKey.trim();
+  return sessionKey.length > 0 ? sessionKey : undefined;
+}
+
+function hasActiveReviewRuns(): boolean {
+  if (!currentSessionKey) return false;
+  return activeReviewSessions.has(currentSessionKey);
+}
+
+function isBusy(): boolean {
+  return isWorking || hasActiveReviewRuns();
+}
+
+function getWorkingExtra(): string | undefined {
+  if (currentTool) return currentTool;
+  if (!isWorking && hasActiveReviewRuns()) return "review";
+  return undefined;
+}
+
 function renderWorkingTitle(ctx: ExtensionContext): void {
-  ctx.ui.setTitle(buildTitle(currentTool, currentFrame()));
+  ctx.ui.setTitle(buildTitle(getWorkingExtra(), currentFrame()));
 }
 
 function renderPromptTitle(ctx: ExtensionContext): void {
-  const extra = isWorking ? currentTool : undefined;
+  const extra = isBusy() ? getWorkingExtra() : undefined;
   ctx.ui.setTitle(buildTitle(extra, "?"));
 }
 
@@ -80,7 +112,7 @@ function renderActiveTitle(ctx: ExtensionContext): void {
     return;
   }
 
-  if (isWorking) {
+  if (isBusy()) {
     renderWorkingTitle(ctx);
     return;
   }
@@ -91,7 +123,7 @@ function renderActiveTitle(ctx: ExtensionContext): void {
 function startSpinnerTimer(ctx: ExtensionContext): void {
   clearSpinnerTimer();
   spinnerTimer = setInterval(() => {
-    if (!isWorking || hasPendingPrompts()) return;
+    if (!isBusy() || hasPendingPrompts()) return;
     frameIndex = (frameIndex + 1) % STATUS_SPINNER_FRAMES.length;
     renderWorkingTitle(ctx);
   }, STATUS_SPINNER_INTERVAL_MS);
@@ -113,6 +145,18 @@ function startSpinner(ctx: ExtensionContext): void {
   }
 }
 
+function renderCompletionFlash(ctx: ExtensionContext): void {
+  clearSpinnerTimer();
+  setProgress(1, 100);
+  ctx.ui.setTitle(buildTitle());
+
+  clearCompletionTimer();
+  completionTimer = setTimeout(() => {
+    setProgress(0);
+    completionTimer = undefined;
+  }, COMPLETION_FLASH_MS);
+}
+
 function stopSpinner(ctx: ExtensionContext): void {
   isWorking = false;
   currentTool = undefined;
@@ -124,14 +168,14 @@ function stopSpinner(ctx: ExtensionContext): void {
     return;
   }
 
-  setProgress(1, 100);
-  ctx.ui.setTitle(buildTitle());
+  if (hasActiveReviewRuns()) {
+    setProgress(3);
+    renderWorkingTitle(ctx);
+    startSpinnerTimer(ctx);
+    return;
+  }
 
-  clearCompletionTimer();
-  completionTimer = setTimeout(() => {
-    setProgress(0);
-    completionTimer = undefined;
-  }, COMPLETION_FLASH_MS);
+  renderCompletionFlash(ctx);
 }
 
 function handlePromptStart(ctx: ExtensionContext): void {
@@ -149,7 +193,7 @@ function handlePromptEnd(ctx: ExtensionContext): void {
 
   clearCompletionTimer();
 
-  if (isWorking) {
+  if (isBusy()) {
     setProgress(3);
     renderWorkingTitle(ctx);
     startSpinnerTimer(ctx);
@@ -163,10 +207,50 @@ function syncSessionTitle(ctx: ExtensionContext): void {
   renderActiveTitle(ctx);
 }
 
+function markReviewSessionActive(sessionKey: string): void {
+  activeReviewSessions.add(sessionKey);
+}
+
+function markReviewSessionInactive(sessionKey: string): void {
+  activeReviewSessions.delete(sessionKey);
+}
+
+function handleReviewStart(ctx: ExtensionContext): void {
+  clearCompletionTimer();
+  setProgress(hasPendingPrompts() ? 0 : 3);
+  renderActiveTitle(ctx);
+  if (!hasPendingPrompts()) {
+    startSpinnerTimer(ctx);
+  }
+}
+
+function handleReviewEnd(ctx: ExtensionContext): void {
+  if (isWorking) {
+    renderActiveTitle(ctx);
+    return;
+  }
+
+  if (hasPendingPrompts()) {
+    setProgress(0);
+    renderActiveTitle(ctx);
+    return;
+  }
+
+  if (hasActiveReviewRuns()) {
+    setProgress(3);
+    renderActiveTitle(ctx);
+    startSpinnerTimer(ctx);
+    return;
+  }
+
+  renderCompletionFlash(ctx);
+}
+
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     if (!ctx.hasUI) return;
     latestCtx = ctx;
+    currentSessionKey = getSessionKey(ctx);
     sessionName = pi.getSessionName();
     syncSessionTitle(ctx);
   });
@@ -174,8 +258,13 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_switch", async (_event, ctx) => {
     if (!ctx.hasUI) return;
     latestCtx = ctx;
+    currentSessionKey = getSessionKey(ctx);
     sessionName = pi.getSessionName();
     syncSessionTitle(ctx);
+    clearSpinnerTimer();
+    if (isBusy() && !hasPendingPrompts()) {
+      startSpinnerTimer(ctx);
+    }
   });
 
   pi.on("agent_start", async (_event, ctx) => {
@@ -223,12 +312,41 @@ export default function (pi: ExtensionAPI) {
     handlePromptEnd(ctx);
   });
 
-  pi.on("session_shutdown", async (_event, _ctx) => {
+  pi.events.on(REVIEW_EVENT_START, (data) => {
+    const sessionKey = extractReviewSessionKey(data);
+    if (!sessionKey) return;
+
+    markReviewSessionActive(sessionKey);
+
+    const ctx = latestCtx;
+    if (!ctx || !ctx.hasUI) return;
+    if (currentSessionKey !== sessionKey) return;
+    handleReviewStart(ctx);
+  });
+
+  pi.events.on(REVIEW_EVENT_END, (data) => {
+    const sessionKey = extractReviewSessionKey(data);
+    if (!sessionKey) return;
+
+    markReviewSessionInactive(sessionKey);
+
+    const ctx = latestCtx;
+    if (!ctx || !ctx.hasUI) return;
+    if (currentSessionKey !== sessionKey) return;
+    handleReviewEnd(ctx);
+  });
+
+  pi.on("session_shutdown", async (_event, ctx) => {
     clearSpinnerTimer();
     clearCompletionTimer();
     isWorking = false;
     currentTool = undefined;
     pendingPromptCount = 0;
+    const sessionKey = getSessionKey(ctx);
+    activeReviewSessions.delete(sessionKey);
+    if (currentSessionKey === sessionKey) {
+      currentSessionKey = undefined;
+    }
     latestCtx = undefined;
     setProgress(0);
   });

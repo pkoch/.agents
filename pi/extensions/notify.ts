@@ -10,7 +10,10 @@
  * - Windows toast: Windows Terminal (WSL)
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+
+const REVIEW_EVENT_START = "review:start";
+const REVIEW_EVENT_END = "review:end";
 
 function windowsToastScript(title: string, body: string): string {
   const type = "Windows.UI.Notifications";
@@ -58,8 +61,44 @@ function getPromptSource(event: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function getSessionKey(ctx: ExtensionContext): string {
+  return ctx.sessionManager.getSessionFile() ?? `session:${ctx.sessionManager.getSessionId()}`;
+}
+
+function extractReviewSessionKey(data: unknown): string | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const payload = data as { sessionKey?: unknown };
+  if (typeof payload.sessionKey !== "string") return undefined;
+  const sessionKey = payload.sessionKey.trim();
+  return sessionKey.length > 0 ? sessionKey : undefined;
+}
+
+function extractReviewOutcome(data: unknown): "success" | "failed" | "cancelled" | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const payload = data as { outcome?: unknown };
+  if (payload.outcome === "success" || payload.outcome === "failed" || payload.outcome === "cancelled") {
+    return payload.outcome;
+  }
+  return undefined;
+}
+
 export default function (pi: ExtensionAPI) {
   let pendingPromptCount = 0;
+  const activeReviewSessions = new Set<string>();
+  let currentSessionKey: string | undefined;
+
+  const hasCurrentSessionReviewRun = () => {
+    if (!currentSessionKey) return false;
+    return activeReviewSessions.has(currentSessionKey);
+  };
+
+  pi.on("session_start", async (_event, ctx) => {
+    currentSessionKey = getSessionKey(ctx);
+  });
+
+  pi.on("session_switch", async (_event, ctx) => {
+    currentSessionKey = getSessionKey(ctx);
+  });
 
   pi.events.on("ui:prompt_start", (data) => {
     const wasIdle = pendingPromptCount === 0;
@@ -75,12 +114,46 @@ export default function (pi: ExtensionAPI) {
     pendingPromptCount -= 1;
   });
 
-  pi.on("agent_end", async () => {
+  pi.events.on(REVIEW_EVENT_START, (data) => {
+    const sessionKey = extractReviewSessionKey(data);
+    if (!sessionKey) return;
+    activeReviewSessions.add(sessionKey);
+  });
+
+  pi.events.on(REVIEW_EVENT_END, (data) => {
+    const sessionKey = extractReviewSessionKey(data);
+    if (!sessionKey) return;
+
+    activeReviewSessions.delete(sessionKey);
+
     if (pendingPromptCount > 0) return;
+    if (!currentSessionKey || sessionKey !== currentSessionKey) return;
+
+    const outcome = extractReviewOutcome(data);
+    if (outcome === "success") {
+      notify("Pi", "Review completed");
+      return;
+    }
+    if (outcome === "cancelled") {
+      notify("Pi", "Review cancelled");
+      return;
+    }
+    notify("Pi", "Review failed");
+  });
+
+  pi.on("agent_end", async (_event, ctx) => {
+    currentSessionKey = getSessionKey(ctx);
+    if (pendingPromptCount > 0) return;
+    if (hasCurrentSessionReviewRun()) return;
     notify("Pi", "Ready for input");
   });
 
-  pi.on("session_shutdown", async () => {
+  pi.on("session_shutdown", async (_event, ctx) => {
     pendingPromptCount = 0;
+    const sessionKey = getSessionKey(ctx);
+    activeReviewSessions.delete(sessionKey);
+    if (currentSessionKey === sessionKey) {
+      currentSessionKey = undefined;
+    }
   });
 }
