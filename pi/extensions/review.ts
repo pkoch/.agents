@@ -1831,9 +1831,10 @@ async function runReviewPipeline(
 		unsubscribeInterrupt =
 			ctx.hasUI
 				? ctx.ui.onTerminalInput((data) => {
-					if (!matchesKey(data, "escape")) return;
-					if (runtimeState.activePromptCount > 0) return;
+					if (!matchesKey(data, "escape")) return undefined;
+					if (runtimeState.activePromptCount > 0) return undefined;
 					requestCancellation();
+					return { consume: true };
 				})
 				: undefined;
 
