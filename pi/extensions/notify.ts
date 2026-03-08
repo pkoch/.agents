@@ -44,6 +44,8 @@ function notifyWindows(title: string, body: string): void {
 }
 
 function notify(title: string, body: string): void {
+  if (!process.stdout.isTTY || !process.stdin.isTTY) return;
+
   if (process.env.WT_SESSION) {
     notifyWindows(title, body);
   } else if (process.env.KITTY_WINDOW_ID) {
