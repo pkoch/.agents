@@ -209,7 +209,7 @@ type PreparedReviewRun = {
 // --- Constants & prompts ---
 
 const REVIEW_FOCUS_TOOLS = "read,bash,grep,find,ls";
-const REVIEW_TASK_TIMEOUT_MS = 20 * 60 * 1000;
+const REVIEW_TASK_TIMEOUT_MS = 30 * 60 * 1000;
 const REVIEW_STARTUP_RETRY_DELAYS_MS = [500, 1000, 2000, 4000, 8000] as const;
 const REVIEW_STARTUP_RETRY_JITTER_RATIO = 0.2;
 const REVIEW_UNTRACKED_HASH_DISABLED = "__disabled__";
@@ -1336,7 +1336,7 @@ async function runFocusTaskAttempt(task: FocusTask, cwd: string, control?: Revie
 			focus: task.focus,
 			model: task.modelLabel,
 			ok: false,
-			error: "Review timed out after 20 minutes.",
+			error: "Review timed out after 30 minutes.",
 			errorKind: "other",
 		};
 	}
