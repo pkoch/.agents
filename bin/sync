@@ -56,7 +56,7 @@ Notes:
       - ~/.pi/agent/AGENTS.md
   - ~/.agents/skills are symlinked only to ~/.claude/skills.
   - Codex and Pi auto-discover skills from ~/.agents/skills.
-  - Pi extensions are synced from ~/.agents/pi/extensions to ~/.pi/agent/extensions.
+  - Pi extensions are synced from ~/.agents/pi/extensions to ~/.pi/agent/extensions, excluding node_modules.
   - Pi sandbox config is symlinked from ~/.agents/pi/agent/sandbox.json to ~/.pi/agent/sandbox.json.
 EOF
 }
@@ -108,6 +108,7 @@ for entry in "${AGENTS_PI_EXTENSIONS_DIR}"/*; do
   [[ -e "${entry}" ]] || continue
   base="$(basename "${entry}")"
   [[ "${base}" == .* ]] && continue
+  [[ "${base}" == "node_modules" ]] && continue
 
   if [[ -d "${entry}" ]]; then
     pi_extensions+=("${base}")
@@ -280,6 +281,7 @@ if [[ "${PRUNE}" -eq 1 ]]; then
   for entry in "${PI_EXTENSIONS_DIR}"/*; do
     [[ -e "${entry}" ]] || continue
     base="$(basename "${entry}")"
+    [[ "${base}" == "node_modules" ]] && continue
 
     keep=0
     for ext_name in "${pi_extensions[@]}"; do
