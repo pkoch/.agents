@@ -37,33 +37,12 @@
     "deniedDomains": [],
     "allowLocalBinding": true,
     "allowAllUnixSockets": false,
-    "allowUnixSockets": [
-      "/tmp",
-      "/private/tmp",
-      "~/.gnupg",
-      "~/.orbstack/run/docker.sock"
-    ]
+    "allowUnixSockets": ["/tmp", "/private/tmp", "~/.gnupg", "~/.orbstack/run/docker.sock"]
   },
   "filesystem": {
-    "denyRead": [
-      "~/.aws"
-    ],
-    "denyWrite": [
-      ".env",
-      ".env.*",
-      "*.pem",
-      "*.key",
-      "~/.ssh"
-    ],
-    "allowWrite": [
-      ".",
-      "/tmp",
-      "/private/tmp",
-      "~/.gnupg",
-      "~/.cache",
-      "~/.docker",
-      "~/.npm"
-    ]
+    "denyRead": ["~/.aws"],
+    "denyWrite": [".env", ".env.*", "*.pem", "*.key", "~/.ssh"],
+    "allowWrite": [".", "/tmp", "/private/tmp", "~/.gnupg", "~/.cache", "~/.docker", "~/.npm"]
   },
   "enableWeakerNestedSandbox": false,
   "enableWeakerNetworkIsolation": true

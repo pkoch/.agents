@@ -3,11 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc -p tsconfig.json --noEmit"
+    "fix": "tsc -p ../tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "0.57.1",
     "@mariozechner/pi-ai": "0.57.1",
+    "@mariozechner/pi-coding-agent": "0.57.1",
     "@mariozechner/pi-tui": "0.57.1",
     "@sinclair/typebox": "0.34.48",
     "@types/node": "24.12.0",

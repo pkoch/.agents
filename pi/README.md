@@ -1,6 +1,15 @@
 # pi
 
-[pi](https://pi.dev)-specific configuration, namely extensions.
+[pi](https://pi.dev)-specific configuration: extensions, Pi-only skills, and repo-managed agent defaults.
 
-Extensions are designed to be stand-alone modules. Some may also enrich each other through events, but that never affects their core functionality.
+## Layout
 
+```text
+agent/sandbox.json   Repo-managed Pi sandbox defaults
+extensions/          Pi extensions and extension packages
+skills/              Pi-specific skills
+```
+
+Most extensions are stand-alone modules. Some enrich each other through events, but that does not affect their core functionality.
+
+`extensions/telegram/` and `extensions/sandbox/` are package-backed extensions because they ship extra runtime code or dependencies.

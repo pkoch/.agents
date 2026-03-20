@@ -64,7 +64,10 @@ function parseBranchArgs(args: string): { tmuxLayout?: TmuxLayout; error?: strin
     }
   }
 
-  return { error: "Usage: /branch [window|split-right|split-down] or /branch layout=<window|split-right|split-down>" }
+  return {
+    error:
+      "Usage: /branch [window|split-right|split-down] or /branch layout=<window|split-right|split-down>",
+  }
 }
 
 function renderTerminalCommand(template: string, cwd: string, sessionFile: string): string {
@@ -205,7 +208,8 @@ export default function (pi: ExtensionAPI) {
 
       const sessionFile = ctx.sessionManager.getSessionFile()
       if (!sessionFile) {
-        if (ctx.hasUI) ctx.ui.notify("Session is not persisted. Restart without --no-session.", "error")
+        if (ctx.hasUI)
+          ctx.ui.notify("Session is not persisted. Restart without --no-session.", "error")
         return
       }
 
@@ -238,7 +242,8 @@ export default function (pi: ExtensionAPI) {
 
       if (process.env.TMUX) {
         const rawTmuxLayout = getStringFlag(pi, TMUX_LAYOUT_FLAG)
-        const tmuxLayout = parsedArgs.tmuxLayout ?? (rawTmuxLayout ? parseTmuxLayout(rawTmuxLayout) : "window")
+        const tmuxLayout =
+          parsedArgs.tmuxLayout ?? (rawTmuxLayout ? parseTmuxLayout(rawTmuxLayout) : "window")
 
         if (!tmuxLayout) {
           if (ctx.hasUI) {

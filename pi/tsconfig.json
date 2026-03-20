@@ -5,22 +5,15 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "moduleDetection": "force",
-
+    "allowImportingTsExtensions": true,
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true,
-
     "types": ["node"]
-
-    // Future tightening candidates:
-    // "noUncheckedIndexedAccess": true,
-    // "exactOptionalPropertyTypes": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true
   },
-  "include": ["./*.ts", "./*/index.ts"],
-  "exclude": ["./node_modules", "./*/node_modules", "./**/dist", "./**/build"]
+  "include": ["./**/*.ts", "./**/*.d.ts"],
+  "exclude": ["./**/node_modules", "./**/dist", "./**/build"]
 }

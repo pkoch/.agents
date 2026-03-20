@@ -14,13 +14,13 @@ Access Sentry data via the Sentry API for debugging and investigation.
 
 ## Quick reference
 
-| Task | Command |
-|------|---------|
+| Task                  | Command                                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Find errors on a date | `"$HOME/.agents/skills/sentry/scripts/search-events.js" --org X --start 2025-12-23T15:00:00 --level error` |
-| List open issues | `"$HOME/.agents/skills/sentry/scripts/list-issues.js" --org X --status unresolved` |
-| Get issue details | `"$HOME/.agents/skills/sentry/scripts/fetch-issue.js" <issue-id-or-url> --latest` |
-| Get event details | `"$HOME/.agents/skills/sentry/scripts/fetch-event.js" <event-id> --org X --project Y` |
-| Search logs | `"$HOME/.agents/skills/sentry/scripts/search-logs.js" --org X --project Y "level:error"` |
+| List open issues      | `"$HOME/.agents/skills/sentry/scripts/list-issues.js" --org X --status unresolved`                         |
+| Get issue details     | `"$HOME/.agents/skills/sentry/scripts/fetch-issue.js" <issue-id-or-url> --latest`                          |
+| Get event details     | `"$HOME/.agents/skills/sentry/scripts/fetch-event.js" <event-id> --org X --project Y`                      |
+| Search logs           | `"$HOME/.agents/skills/sentry/scripts/search-logs.js" --org X --project Y "level:error"`                   |
 
 ## Common debugging workflows
 
@@ -88,12 +88,14 @@ Find events around a specific timestamp:
 Get details about a specific issue (grouped error).
 
 **Accepts:**
+
 - Issue ID: `5765604106`
 - Issue URL: `https://sentry.io/organizations/sentry/issues/5765604106/`
 - New URL format: `https://myorg.sentry.io/issues/5765604106/`
 - Short ID: `JAVASCRIPT-ABC` (requires `--org`)
 
 **Options:**
+
 - `--latest` include the latest event with full stack trace
 - `--org <org>` organization slug (for short IDs)
 - `--json` output raw JSON
@@ -107,6 +109,7 @@ Get details about a specific issue (grouped error).
 ```
 
 **Options:**
+
 - `--org, -o <org>` organization slug (required)
 - `--project, -p <project>` project slug (required)
 - `--breadcrumbs, -b` show all breadcrumbs (default: last 30)
@@ -122,11 +125,13 @@ Get details about a specific issue (grouped error).
 ```
 
 **Time range options:**
+
 - `--period, -t <period>` relative time (24h, 7d, 14d)
 - `--start <datetime>` start time (ISO 8601: 2025-12-23T15:00:00)
 - `--end <datetime>` end time (ISO 8601)
 
 **Filter options:**
+
 - `--org, -o <org>` organization slug (required)
 - `--project, -p <project>` project slug or ID
 - `--query, -q <query>` Discover search query
@@ -137,6 +142,7 @@ Get details about a specific issue (grouped error).
 - `--fields <fields>` comma-separated fields to include
 
 **Query syntax (Discover):**
+
 ```
 transaction:process-*     Wildcard transaction match
 level:error               Filter by level
@@ -154,6 +160,7 @@ has:stack.filename        Has stack trace
 ```
 
 **Options:**
+
 - `--org, -o <org>` organization slug (required)
 - `--project, -p <project>` project slug (repeatable)
 - `--query, -q <query>` issue search query
@@ -173,6 +180,7 @@ has:stack.filename        Has stack trace
 ```
 
 **Options:**
+
 - `--org, -o <org>` organization slug (required unless URL provided)
 - `--project, -p <project>` filter by project slug or ID
 - `--period, -t <period>` time period (default: 24h)

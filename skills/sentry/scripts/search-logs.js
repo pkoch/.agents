@@ -1,14 +1,8 @@
 #!/usr/bin/env node
 
-import { SENTRY_API_BASE, getAuthToken, fetchJson, formatTimestamp } from "../lib/auth.js";
+import { SENTRY_API_BASE, getAuthToken, fetchJson } from "../lib/auth.js"
 
-const LOG_FIELDS = [
-  "sentry.item_id",
-  "trace",
-  "sentry.severity",
-  "timestamp",
-  "message",
-];
+const LOG_FIELDS = ["sentry.item_id", "trace", "sentry.severity", "timestamp", "message"]
 
 /**
  * Parse a Sentry logs explorer URL
@@ -18,39 +12,39 @@ const LOG_FIELDS = [
  */
 function parseLogsUrl(urlStr) {
   try {
-    const url = new URL(urlStr);
-    const params = url.searchParams;
-    const result = {};
+    const url = new URL(urlStr)
+    const params = url.searchParams
+    const result = {}
 
     // Extract org from subdomain (earendil.sentry.io) or path (/organizations/myorg/)
-    const subdomainMatch = url.hostname.match(/^([^.]+)\.sentry\.io$/);
+    const subdomainMatch = url.hostname.match(/^([^.]+)\.sentry\.io$/)
     if (subdomainMatch && subdomainMatch[1] !== "www") {
-      result.org = subdomainMatch[1];
+      result.org = subdomainMatch[1]
     } else {
-      const pathMatch = url.pathname.match(/\/organizations\/([^/]+)\//);
+      const pathMatch = url.pathname.match(/\/organizations\/([^/]+)\//)
       if (pathMatch) {
-        result.org = pathMatch[1];
+        result.org = pathMatch[1]
       }
     }
 
     // Extract project ID
     if (params.has("project")) {
-      result.project = params.get("project");
+      result.project = params.get("project")
     }
 
     // Extract time period
     if (params.has("statsPeriod")) {
-      result.period = params.get("statsPeriod");
+      result.period = params.get("statsPeriod")
     }
 
     // Extract query
     if (params.has("logsQuery")) {
-      result.query = params.get("logsQuery");
+      result.query = params.get("logsQuery")
     }
 
-    return result;
+    return result
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -63,40 +57,40 @@ function parseArgs(args) {
     limit: 100,
     json: false,
     help: false,
-  };
+  }
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+    const arg = args[i]
 
     if (arg === "--help" || arg === "-h") {
-      options.help = true;
+      options.help = true
     } else if (arg === "--json") {
-      options.json = true;
+      options.json = true
     } else if (arg === "--org" || arg === "-o") {
-      options.org = args[++i];
+      options.org = args[++i]
     } else if (arg === "--project" || arg === "-p") {
-      options.project = args[++i];
+      options.project = args[++i]
     } else if (arg === "--period" || arg === "-t") {
-      options.period = args[++i];
+      options.period = args[++i]
     } else if (arg === "--limit" || arg === "-n") {
-      options.limit = parseInt(args[++i], 10);
+      options.limit = parseInt(args[++i], 10)
     } else if (!arg.startsWith("-")) {
       // Check if it's a Sentry URL
       if (arg.includes("sentry.io/") && arg.includes("/logs")) {
-        const urlOptions = parseLogsUrl(arg);
+        const urlOptions = parseLogsUrl(arg)
         if (urlOptions) {
-          if (urlOptions.org) options.org = urlOptions.org;
-          if (urlOptions.project) options.project = urlOptions.project;
-          if (urlOptions.period) options.period = urlOptions.period;
-          if (urlOptions.query) options.query = urlOptions.query;
+          if (urlOptions.org) options.org = urlOptions.org
+          if (urlOptions.project) options.project = urlOptions.project
+          if (urlOptions.period) options.period = urlOptions.period
+          if (urlOptions.query) options.query = urlOptions.query
         }
       } else if (!options.query) {
-        options.query = arg;
+        options.query = arg
       }
     }
   }
 
-  return options;
+  return options
 }
 
 function showHelp() {
@@ -132,109 +126,109 @@ Examples:
 
   # Use a Sentry URL directly:
   search-logs.js "https://myorg.sentry.io/explore/logs/?project=123&statsPeriod=7d"
-`);
+`)
 }
 
 function formatLogEntry(entry) {
-  const lines = [];
+  const lines = []
 
-  const ts = entry.timestamp || "N/A";
-  const severity = entry["sentry.severity"] || "info";
-  const message = entry.message || "(no message)";
-  const trace = entry.trace || null;
+  const ts = entry.timestamp || "N/A"
+  const severity = entry["sentry.severity"] || "info"
+  const message = entry.message || "(no message)"
+  const trace = entry.trace || null
 
   // Format timestamp for display
-  let displayTs = ts;
+  let displayTs = ts
   try {
-    const date = new Date(ts);
+    const date = new Date(ts)
     if (!isNaN(date.getTime())) {
-      displayTs = date.toISOString().replace("T", " ").slice(0, 19);
+      displayTs = date.toISOString().replace("T", " ").slice(0, 19)
     }
   } catch {}
 
   // Color-code severity in output
-  const severityDisplay = `[${severity.toUpperCase().padEnd(5)}]`;
+  const severityDisplay = `[${severity.toUpperCase().padEnd(5)}]`
 
-  lines.push(`${displayTs} ${severityDisplay} ${message}`);
+  lines.push(`${displayTs} ${severityDisplay} ${message}`)
 
   if (trace) {
-    lines.push(`  trace: ${trace}`);
+    lines.push(`  trace: ${trace}`)
   }
 
-  return lines.join("\n");
+  return lines.join("\n")
 }
 
 function formatOutput(data) {
   if (!data.data || data.data.length === 0) {
-    return "No logs found matching your query.";
+    return "No logs found matching your query."
   }
 
-  const lines = [];
-  lines.push(`Found ${data.data.length} log entries:\n`);
+  const lines = []
+  lines.push(`Found ${data.data.length} log entries:\n`)
 
   for (const entry of data.data) {
-    lines.push(formatLogEntry(entry));
-    lines.push("");
+    lines.push(formatLogEntry(entry))
+    lines.push("")
   }
 
-  return lines.join("\n").trimEnd();
+  return lines.join("\n").trimEnd()
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const options = parseArgs(args);
+  const args = process.argv.slice(2)
+  const options = parseArgs(args)
 
   if (options.help) {
-    showHelp();
-    process.exit(0);
+    showHelp()
+    process.exit(0)
   }
 
   if (!options.org) {
-    console.error("Error: --org is required");
-    console.error("Run with --help for usage information");
-    process.exit(1);
+    console.error("Error: --org is required")
+    console.error("Run with --help for usage information")
+    process.exit(1)
   }
 
-  const token = getAuthToken();
+  const token = getAuthToken()
 
   // Build query parameters
-  const params = new URLSearchParams();
-  params.set("dataset", "logs");
-  params.set("statsPeriod", options.period);
-  params.set("per_page", Math.min(options.limit, 1000).toString());
-  params.set("sort", "-timestamp");
+  const params = new URLSearchParams()
+  params.set("dataset", "logs")
+  params.set("statsPeriod", options.period)
+  params.set("per_page", Math.min(options.limit, 1000).toString())
+  params.set("sort", "-timestamp")
 
   // Add fields
   for (const field of LOG_FIELDS) {
-    params.append("field", field);
+    params.append("field", field)
   }
 
   // Build search query
-  const queryParts = [];
+  const queryParts = []
   if (options.project) {
-    queryParts.push(`project:${options.project}`);
+    queryParts.push(`project:${options.project}`)
   }
   if (options.query) {
-    queryParts.push(options.query);
+    queryParts.push(options.query)
   }
   if (queryParts.length > 0) {
-    params.set("query", queryParts.join(" "));
+    params.set("query", queryParts.join(" "))
   }
 
-  const url = `${SENTRY_API_BASE}/organizations/${encodeURIComponent(options.org)}/events/?${params.toString()}`;
+  const url = `${SENTRY_API_BASE}/organizations/${encodeURIComponent(options.org)}/events/?${params.toString()}`
 
   try {
-    const data = await fetchJson(url, token);
+    const data = await fetchJson(url, token)
 
     if (options.json) {
-      console.log(JSON.stringify(data, null, 2));
+      console.log(JSON.stringify(data, null, 2))
     } else {
-      console.log(formatOutput(data));
+      console.log(formatOutput(data))
     }
   } catch (err) {
-    console.error("Error:", err.message);
-    process.exit(1);
+    console.error("Error:", err.message)
+    process.exit(1)
   }
 }
 
-main();
+main()

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { SENTRY_API_BASE, getAuthToken, fetchJson, formatTimestamp, resolveProjectId } from "../lib/auth.js";
+import { SENTRY_API_BASE, getAuthToken, fetchJson, resolveProjectId } from "../lib/auth.js"
 
 const HELP = `Usage: search-events.js [options]
 
@@ -53,7 +53,7 @@ Examples:
 
   # Get more fields
   search-events.js --org myorg --fields "id,title,timestamp,user.email"
-`;
+`
 
 function parseArgs(args) {
   const options = {
@@ -70,222 +70,222 @@ function parseArgs(args) {
     fields: ["id", "title", "timestamp", "transaction", "message"],
     json: false,
     help: false,
-  };
+  }
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+    const arg = args[i]
 
     switch (arg) {
       case "--help":
       case "-h":
-        options.help = true;
-        break;
+        options.help = true
+        break
       case "--json":
-        options.json = true;
-        break;
+        options.json = true
+        break
       case "--org":
       case "-o":
-        options.org = args[++i];
-        break;
+        options.org = args[++i]
+        break
       case "--project":
       case "-p":
-        options.project = args[++i];
-        break;
+        options.project = args[++i]
+        break
       case "--query":
       case "-q":
-        options.query = args[++i];
-        break;
+        options.query = args[++i]
+        break
       case "--period":
       case "-t":
-        options.period = args[++i];
-        break;
+        options.period = args[++i]
+        break
       case "--start":
-        options.start = args[++i];
-        break;
+        options.start = args[++i]
+        break
       case "--end":
-        options.end = args[++i];
-        break;
+        options.end = args[++i]
+        break
       case "--transaction":
-        options.transaction = args[++i];
-        break;
+        options.transaction = args[++i]
+        break
       case "--tag":
-        options.tags.push(args[++i]);
-        break;
+        options.tags.push(args[++i])
+        break
       case "--level":
-        options.level = args[++i];
-        break;
+        options.level = args[++i]
+        break
       case "--limit":
       case "-n":
-        options.limit = parseInt(args[++i], 10);
-        break;
+        options.limit = parseInt(args[++i], 10)
+        break
       case "--fields":
-        options.fields = args[++i].split(",").map((f) => f.trim());
-        break;
+        options.fields = args[++i].split(",").map((f) => f.trim())
+        break
     }
   }
 
   // Default to 24h if no time range specified
   if (!options.period && !options.start) {
-    options.period = "24h";
+    options.period = "24h"
   }
 
-  return options;
+  return options
 }
 
 function formatEvent(event, fields) {
-  const lines = [];
+  const lines = []
 
-  const id = event.id || event["event.type"] || "?";
-  const ts = event.timestamp || "N/A";
-  const title = event.title || event.transaction || event.message || "(no title)";
-  const transaction = event.transaction || "";
+  const id = event.id || event["event.type"] || "?"
+  const ts = event.timestamp || "N/A"
+  const title = event.title || event.transaction || event.message || "(no title)"
+  const transaction = event.transaction || ""
 
   // Format timestamp
-  let displayTs = ts;
+  let displayTs = ts
   try {
-    const date = new Date(ts);
+    const date = new Date(ts)
     if (!isNaN(date.getTime())) {
-      displayTs = date.toISOString().replace("T", " ").slice(0, 19);
+      displayTs = date.toISOString().replace("T", " ").slice(0, 19)
     }
   } catch {}
 
-  lines.push(`[${displayTs}] ${title}`);
+  lines.push(`[${displayTs}] ${title}`)
 
   if (transaction && transaction !== title) {
-    lines.push(`  transaction: ${transaction}`);
+    lines.push(`  transaction: ${transaction}`)
   }
 
   if (event.message && event.message !== title) {
-    lines.push(`  message: ${event.message}`);
+    lines.push(`  message: ${event.message}`)
   }
 
   // Show any extra fields the user requested
   for (const field of fields) {
-    if (["id", "title", "timestamp", "transaction", "message"].includes(field)) continue;
-    const value = event[field];
+    if (["id", "title", "timestamp", "transaction", "message"].includes(field)) continue
+    const value = event[field]
     if (value !== undefined && value !== null && value !== "") {
-      lines.push(`  ${field}: ${value}`);
+      lines.push(`  ${field}: ${value}`)
     }
   }
 
-  lines.push(`  id: ${id}`);
+  lines.push(`  id: ${id}`)
 
-  return lines.join("\n");
+  return lines.join("\n")
 }
 
 function formatOutput(data, fields) {
   if (!data.data || data.data.length === 0) {
-    return "No events found matching your query.";
+    return "No events found matching your query."
   }
 
-  const lines = [];
-  lines.push(`Found ${data.data.length} events:\n`);
+  const lines = []
+  lines.push(`Found ${data.data.length} events:\n`)
 
   for (const event of data.data) {
-    lines.push(formatEvent(event, fields));
-    lines.push("");
+    lines.push(formatEvent(event, fields))
+    lines.push("")
   }
 
-  return lines.join("\n").trimEnd();
+  return lines.join("\n").trimEnd()
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const options = parseArgs(args);
+  const args = process.argv.slice(2)
+  const options = parseArgs(args)
 
   if (options.help) {
-    console.log(HELP);
-    process.exit(0);
+    console.log(HELP)
+    process.exit(0)
   }
 
   if (!options.org) {
-    console.error("Error: --org is required");
-    console.error("Run with --help for usage information");
-    process.exit(1);
+    console.error("Error: --org is required")
+    console.error("Run with --help for usage information")
+    process.exit(1)
   }
 
-  const token = getAuthToken();
+  const token = getAuthToken()
 
   // Build query parameters
-  const params = new URLSearchParams();
-  params.set("dataset", "discover");
+  const params = new URLSearchParams()
+  params.set("dataset", "discover")
 
   // Time range
   if (options.start) {
-    params.set("start", options.start);
+    params.set("start", options.start)
     if (options.end) {
-      params.set("end", options.end);
+      params.set("end", options.end)
     } else {
       // If only start, use current time as end
-      params.set("end", new Date().toISOString());
+      params.set("end", new Date().toISOString())
     }
   } else if (options.period) {
-    params.set("statsPeriod", options.period);
+    params.set("statsPeriod", options.period)
   }
 
-  params.set("per_page", Math.min(options.limit, 100).toString());
-  params.set("sort", "-timestamp");
+  params.set("per_page", Math.min(options.limit, 100).toString())
+  params.set("sort", "-timestamp")
 
   // Add fields
   for (const field of options.fields) {
-    params.append("field", field);
+    params.append("field", field)
   }
 
   // Always include project.name for context
   if (!options.fields.includes("project.name")) {
-    params.append("field", "project.name");
+    params.append("field", "project.name")
   }
 
   // Build search query
-  const queryParts = [];
+  const queryParts = []
 
   if (options.project) {
-    const projectId = await resolveProjectId(options.org, options.project, token);
-    params.set("project", projectId);
+    const projectId = await resolveProjectId(options.org, options.project, token)
+    params.set("project", projectId)
   }
 
   if (options.query) {
-    queryParts.push(options.query);
+    queryParts.push(options.query)
   }
 
   if (options.transaction) {
-    queryParts.push(`transaction:${options.transaction}`);
+    queryParts.push(`transaction:${options.transaction}`)
   }
 
   if (options.level) {
-    queryParts.push(`level:${options.level}`);
+    queryParts.push(`level:${options.level}`)
   }
 
   for (const tag of options.tags) {
     // Handle tags[key]:value format
     if (tag.includes(":")) {
-      const [key, value] = tag.split(":", 2);
+      const [key, value] = tag.split(":", 2)
       if (key.startsWith("tags[")) {
-        queryParts.push(`${key}:${value}`);
+        queryParts.push(`${key}:${value}`)
       } else {
-        queryParts.push(`tags[${key}]:${value}`);
+        queryParts.push(`tags[${key}]:${value}`)
       }
     }
   }
 
   if (queryParts.length > 0) {
-    params.set("query", queryParts.join(" "));
+    params.set("query", queryParts.join(" "))
   }
 
-  const url = `${SENTRY_API_BASE}/organizations/${encodeURIComponent(options.org)}/events/?${params.toString()}`;
+  const url = `${SENTRY_API_BASE}/organizations/${encodeURIComponent(options.org)}/events/?${params.toString()}`
 
   try {
-    const data = await fetchJson(url, token);
+    const data = await fetchJson(url, token)
 
     if (options.json) {
-      console.log(JSON.stringify(data, null, 2));
+      console.log(JSON.stringify(data, null, 2))
     } else {
-      console.log(formatOutput(data, options.fields));
+      console.log(formatOutput(data, options.fields))
     }
   } catch (err) {
-    console.error("Error:", err.message);
-    process.exit(1);
+    console.error("Error:", err.message)
+    process.exit(1)
   }
 }
 
-main();
+main()

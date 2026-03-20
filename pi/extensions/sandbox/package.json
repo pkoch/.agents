@@ -1,14 +1,15 @@
 {
   "name": "pi-extension-sandbox",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "^0.0.37",
+    "@mariozechner/pi-coding-agent": "0.57.1"
+  },
   "pi": {
     "extensions": [
       "./index.ts"
     ]
-  },
-  "dependencies": {
-    "@anthropic-ai/sandbox-runtime": "^0.0.37"
   }
 }

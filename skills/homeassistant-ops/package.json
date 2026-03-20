@@ -1,6 +1,6 @@
 {
-	"name": "homeassistant-ops",
-	"private": true,
-	"type": "module",
-	"description": "Home Assistant ops skill scripts (no external deps)."
+  "name": "homeassistant-ops",
+  "private": true,
+  "description": "Home Assistant ops skill scripts (no external deps).",
+  "type": "module"
 }

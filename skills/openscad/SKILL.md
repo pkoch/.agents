@@ -36,6 +36,7 @@ This skill ships helper scripts under `scripts/`:
 
 ```bash
 "$HOME/.agents/skills/openscad/scripts/extract-params.sh" model.scad
+"$HOME/.agents/skills/openscad/scripts/extract-params.sh" model.scad --json
 ```
 
 ### Validation
@@ -56,7 +57,7 @@ This skill ships helper scripts under `scripts/`:
 Always validate models visually after creating or modifying them:
 
 1. Generate multi-angle previews.
-2. View *each* generated image with the agent's image viewer (in this environment: the `read` tool).
+2. View _each_ generated image with the agent's image viewer (in this environment: `view_image`).
 3. Check geometry from multiple perspectives (front/back/left/right/top/iso).
 4. Iterate until the renders match the intent.
 
@@ -95,6 +96,7 @@ difference() {
 ```
 
 Parameter comment formats:
+
 - `// [min:max]` numeric range
 - `// [min:step:max]` numeric range with step
 - `// [opt1, opt2, opt3]` dropdown options
@@ -112,7 +114,7 @@ Parameter comment formats:
 "$HOME/.agents/skills/openscad/scripts/multi-preview.sh" model.scad ./previews/
 ```
 
-Use `read` to open each PNG in `./previews/` and confirm the model is correct.
+Use `view_image` to open each PNG in `./previews/` and confirm the model is correct.
 
 ### 4) Export STL
 
@@ -126,7 +128,8 @@ Use `read` to open each PNG in `./previews/` and confirm the model is correct.
 ## Camera positions
 
 Common camera angles:
-- Isometric: `--camera=0,0,0,45,0,45,200`
+
+- Isometric: `--camera=0,0,0,55,0,25,200`
 - Front: `--camera=0,0,0,90,0,0,200`
 - Top: `--camera=0,0,0,0,0,0,200`
 - Right: `--camera=0,0,0,90,0,90,200`
@@ -136,6 +139,7 @@ Format: `x,y,z,rotx,roty,rotz,distance`
 ## Printables publishing checklist
 
 Typically you need:
+
 1. STL file(s) exported via `export-stl.sh`
 2. Preview images (at least one strong hero/isometric view plus extra angles)
 3. A model description covering customizable parameters, print settings, and assembly/use notes

@@ -4,12 +4,7 @@ A pi extension + local daemon that lets you interact with pi via a Telegram bot.
 
 ## Install
 
-Dependencies:
-
-```bash
-cd "$HOME/.agents/pi/extensions/telegram"
-npm install
-```
+Run `npm ci` from the repo root (`$HOME/.agents`). If you only want this package, use `npm ci -w telegram`.
 
 ## Config
 
@@ -35,6 +30,7 @@ Example:
 ```
 
 First time:
+
 - pi will ask for the bot token and save it (one time)
 - pi will show a 6-digit PIN
 

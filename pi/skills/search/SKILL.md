@@ -28,9 +28,10 @@ If a provider is available but fails at runtime (auth, quota, transient errors),
 Install dependencies (run once):
 
 ```bash
-cd "$HOME/.agents/pi/skills/search"
-npm install
+npm ci
 ```
+
+Run from the repo root (`$HOME/.agents`). If you only want this package, use `npm ci -w search`.
 
 ### (Optional) Configure API keys
 

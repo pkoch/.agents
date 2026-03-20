@@ -12,9 +12,10 @@ Chrome DevTools Protocol tools for agent-assisted web automation. These tools co
 Run once before first use:
 
 ```bash
-cd "$HOME/.agents/skills/browser-tools"
-npm install
+npm ci
 ```
+
+Run from the repo root (`$HOME/.agents`). If you only want this package, use `npm ci -w browser-tools`.
 
 ## Start Chromium / Chrome
 

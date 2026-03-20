@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer-core"
 
 /**
  * Connect to browser with timeout, exit on failure.
@@ -12,14 +12,14 @@ export async function connectBrowser(timeout = 5000) {
       defaultViewport: null,
     }),
     new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("timeout")), timeout).unref();
+      setTimeout(() => reject(new Error("timeout")), timeout).unref()
     }),
   ]).catch((e) => {
-    console.error("✗ Could not connect to browser:", e.message);
-    console.error("  Run: browser-start.js");
-    process.exit(1);
-  });
-  return browser;
+    console.error("✗ Could not connect to browser:", e.message)
+    console.error("  Run: browser-start.js")
+    process.exit(1)
+  })
+  return browser
 }
 
 /**
@@ -28,14 +28,13 @@ export async function connectBrowser(timeout = 5000) {
  * @returns {Promise<Page>}
  */
 export async function getActivePage(browser) {
-  const pages = await browser.pages();
-  const page =
-    pages.filter((pg) => pg.url().startsWith("http")).at(-1) || pages.at(-1);
+  const pages = await browser.pages()
+  const page = pages.filter((pg) => pg.url().startsWith("http")).at(-1) || pages.at(-1)
   if (!page) {
-    console.error("✗ No active tab found");
-    process.exit(1);
+    console.error("✗ No active tab found")
+    process.exit(1)
   }
-  return page;
+  return page
 }
 
 /**
@@ -44,8 +43,8 @@ export async function getActivePage(browser) {
  */
 export function printResult(result) {
   if (typeof result === "object" && result !== null) {
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2))
   } else {
-    console.log(result);
+    console.log(result)
   }
 }

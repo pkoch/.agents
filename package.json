@@ -1,0 +1,18 @@
+{
+  "name": "agents",
+  "private": true,
+  "workspaces": [
+    "pi/extensions",
+    "pi/extensions/*",
+    "pi/skills/*",
+    "skills/*"
+  ],
+  "scripts": {
+    "fix:root": "oxfmt . &&  oxlint --fix .",
+    "fix": "npm run fix:root && npm run --workspaces --if-present fix"
+  },
+  "devDependencies": {
+    "oxfmt": "0.41.0",
+    "oxlint": "1.56.0"
+  }
+}
