@@ -31,16 +31,17 @@
  * - custom "<instructions>"
  */
 
+import { spawn, type ChildProcess } from "node:child_process"
+import { createHash, randomUUID } from "node:crypto"
+import { promises as fs } from "node:fs"
+import path from "node:path"
+
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent"
 import { matchesKey } from "@mariozechner/pi-tui"
-import { spawn, type ChildProcess } from "node:child_process"
-import { createHash, randomUUID } from "node:crypto"
-import path from "node:path"
-import { promises as fs } from "node:fs"
 
 // --- Types ---
 
@@ -1657,12 +1658,11 @@ function validateFocusOutput(parsed: unknown): FocusFinding[] {
     if (typeof finding !== "object" || finding === null) continue
     const rec = finding as Record<string, unknown>
     const priority =
-      String(rec.priority ?? "")
-        .toUpperCase()
-        .match(/^P[0-3]$/)?.[0] ?? ""
-    const location = String(rec.location ?? "").trim()
-    const findingText = String(rec.finding ?? "").trim()
-    const fixSuggestion = String(rec.fix_suggestion ?? "").trim()
+      (typeof rec.priority === "string" ? rec.priority : "").toUpperCase().match(/^P[0-3]$/)?.[0] ??
+      ""
+    const location = (typeof rec.location === "string" ? rec.location : "").trim()
+    const findingText = (typeof rec.finding === "string" ? rec.finding : "").trim()
+    const fixSuggestion = (typeof rec.fix_suggestion === "string" ? rec.fix_suggestion : "").trim()
     if (!priority || !location || !findingText || !fixSuggestion) continue
     findings.push({
       priority: priority as Priority,
@@ -1691,11 +1691,11 @@ function validateTriageOutput(parsed: unknown, feedbackItems: TriageFeedbackItem
   for (const item of parsed.items) {
     if (typeof item !== "object" || item === null) continue
     const record = item as Record<string, unknown>
-    const id = String(record.id ?? "").trim()
-    const decision = String(record.decision ?? "").trim()
-    const summary = String(record.summary ?? "").trim()
-    const rationale = String(record.rationale ?? "").trim()
-    const action = String(record.action ?? "").trim()
+    const id = (typeof record.id === "string" ? record.id : "").trim()
+    const decision = (typeof record.decision === "string" ? record.decision : "").trim()
+    const summary = (typeof record.summary === "string" ? record.summary : "").trim()
+    const rationale = (typeof record.rationale === "string" ? record.rationale : "").trim()
+    const action = (typeof record.action === "string" ? record.action : "").trim()
     if (!id || !knownIds.has(id)) continue
     if (
       decision !== "address" &&

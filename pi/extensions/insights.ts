@@ -1,3 +1,7 @@
+import { createHash, randomBytes } from "node:crypto"
+import fs from "node:fs/promises"
+import path from "node:path"
+
 import { complete, type Api, type Model, type UserMessage } from "@mariozechner/pi-ai"
 import {
   BorderedLoader,
@@ -24,9 +28,6 @@ import {
   visibleWidth,
   wrapTextWithAnsi,
 } from "@mariozechner/pi-tui"
-import { createHash, randomBytes } from "node:crypto"
-import fs from "node:fs/promises"
-import path from "node:path"
 
 type InsightScope = "current" | "project" | "all"
 
@@ -1731,7 +1732,7 @@ async function writeFacetCache(
   await writeJsonAtomic(path.join(FACET_CACHE_DIR, `${cacheKey}.json`), facet, signal)
 }
 
-async function readJsonFile(filePath: string): Promise<unknown | null> {
+async function readJsonFile(filePath: string): Promise<unknown> {
   try {
     const raw = await fs.readFile(filePath, "utf8")
     return JSON.parse(raw) as unknown

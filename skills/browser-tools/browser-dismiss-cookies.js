@@ -105,6 +105,7 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
     "i do not agree",
     "i disagree",
     "no thanks",
+    // cspell:disable
     "alle ablehnen",
     "ablehnen",
     "nicht zustimmen",
@@ -122,6 +123,7 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
     "nur notwendige",
     "essential only",
     "nur essentielle",
+    // cspell:enable
   ]
 
   const patterns = acceptCookies ? acceptPatterns : rejectPatterns

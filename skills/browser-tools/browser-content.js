@@ -4,6 +4,7 @@ import { Readability } from "@mozilla/readability"
 import { JSDOM } from "jsdom"
 import TurndownService from "turndown"
 import { gfm } from "turndown-plugin-gfm"
+
 import { connectBrowser, getActivePage } from "./utils.js"
 
 // Global timeout - exit if script takes too long

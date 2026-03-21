@@ -9,9 +9,10 @@
  * - Treats background /review runs as working state via review:start/review:end events
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent"
 import { writeFileSync } from "node:fs"
 import path from "node:path"
+
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent"
 
 const STATUS_SPINNER_INTERVAL_MS = 80
 const STATUS_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]

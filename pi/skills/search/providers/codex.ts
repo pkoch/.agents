@@ -1,5 +1,5 @@
-import os from "node:os"
 import { spawnSync } from "node:child_process"
+import os from "node:os"
 
 const CLI_TIMEOUT_MS = 60_000
 

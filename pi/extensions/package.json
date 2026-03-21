@@ -2,9 +2,6 @@
   "name": "pi-extensions",
   "private": true,
   "type": "module",
-  "scripts": {
-    "fix": "tsc -p ../tsconfig.json --noEmit"
-  },
   "devDependencies": {
     "@mariozechner/pi-ai": "0.57.1",
     "@mariozechner/pi-coding-agent": "0.57.1",

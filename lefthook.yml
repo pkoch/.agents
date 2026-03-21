@@ -1,0 +1,24 @@
+pre-push:
+  jobs:
+    - run: npm audit
+
+pre-commit:
+  parallel: true
+  fail_on_changes: ci
+  jobs:
+    - run: bun run cspell {staged_files}
+    - run: bun run oxfmt {staged_files}
+      stage_fixed: true
+    - run: bun run oxlint --fix {staged_files}
+      stage_fixed: true
+
+#     - name: govet
+#       files: git ls-files -m
+#       glob: "*.go"
+#       run: go vet -- {files}
+#
+#     - script: "hello.js"
+#       runner: node
+#
+#     - script: "hello.go"
+#       runner: go run

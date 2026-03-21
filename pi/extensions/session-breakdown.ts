@@ -17,6 +17,12 @@
  * Source: https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/session-breakdown.ts
  */
 
+import { createReadStream, type Dirent } from "node:fs"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import readline from "node:readline"
+
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent"
 import { BorderedLoader } from "@mariozechner/pi-coding-agent"
 import {
@@ -27,11 +33,6 @@ import {
   truncateToWidth,
   visibleWidth,
 } from "@mariozechner/pi-tui"
-import os from "node:os"
-import path from "node:path"
-import fs from "node:fs/promises"
-import { createReadStream, type Dirent } from "node:fs"
-import readline from "node:readline"
 
 type ModelKey = string // `${provider}/${model}`
 
@@ -108,7 +109,7 @@ interface BreakdownProgressState {
 function setBorderedLoaderMessage(loader: BorderedLoader, message: string) {
   // BorderedLoader wraps a (Cancellable)Loader which supports setMessage(),
   // but it doesn't expose it publicly. Access the inner loader for progress updates.
-  const inner = (loader as any)["loader"] // eslint-disable-line @typescript-eslint/no-explicit-any
+  const inner = (loader as any)["loader"]
   if (inner && typeof inner.setMessage === "function") {
     inner.setMessage(message)
   }

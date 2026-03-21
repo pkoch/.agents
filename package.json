@@ -7,12 +7,11 @@
     "pi/skills/*",
     "skills/*"
   ],
-  "scripts": {
-    "fix:root": "oxfmt . &&  oxlint --fix .",
-    "fix": "npm run fix:root && npm run --workspaces --if-present fix"
-  },
   "devDependencies": {
+    "cspell": "^9.7.0",
+    "lefthook": "^2.1.4",
     "oxfmt": "0.41.0",
-    "oxlint": "1.56.0"
+    "oxlint": "1.56.0",
+    "oxlint-tsgolint": "^0.17.1"
   }
 }

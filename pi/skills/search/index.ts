@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { isKagiConfigured, searchKagi } from "./providers/kagi.ts"
+import { printSearchResults } from "./lib/format.ts"
+import { isCommandInstalled } from "./lib/which.ts"
 import { isBraveConfigured, searchBrave } from "./providers/brave.ts"
 import { searchClaudeCode } from "./providers/claude-code.ts"
 import { searchCodex } from "./providers/codex.ts"
-import { printSearchResults } from "./lib/format.ts"
-import { isCommandInstalled } from "./lib/which.ts"
+import { isKagiConfigured, searchKagi } from "./providers/kagi.ts"
 
 const HELP = `Usage: index.ts <query> [options]
 

@@ -44,6 +44,7 @@ import { spawn } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join, resolve } from "node:path"
+
 import {
   SandboxManager,
   type SandboxAskCallback,
@@ -266,7 +267,7 @@ function loadConfig(cwd: string): LoadedSandboxConfig {
       paths.push({ label: "Global", path: globalConfigPath, status: "loaded" })
     } catch (e) {
       paths.push({ label: "Global", path: globalConfigPath, status: "parse-error" })
-      console.error(`Warning: Could not parse ${globalConfigPath}: ${e}`)
+      console.error(`Warning: Could not parse ${globalConfigPath}: : ${String(e)}`)
     }
   }
 
@@ -276,7 +277,7 @@ function loadConfig(cwd: string): LoadedSandboxConfig {
       paths.push({ label: "Project", path: projectConfigPath, status: "loaded" })
     } catch (e) {
       paths.push({ label: "Project", path: projectConfigPath, status: "parse-error" })
-      console.error(`Warning: Could not parse ${projectConfigPath}: ${e}`)
+      console.error(`Warning: Could not parse ${projectConfigPath}: : ${String(e)}`)
     }
   }
 
@@ -981,7 +982,7 @@ function createSandboxedBashOps(options: SandboxedBashOpsOptions): BashOperation
 
           if (postamble) onData(Buffer.from(postamble))
         } catch (postProcessError) {
-          const message = `[sandbox] Post-processing error: ${postProcessError instanceof Error ? postProcessError.message : postProcessError}`
+          const message = `[sandbox] Post-processing error: ${postProcessError instanceof Error ? postProcessError.message : String(postProcessError)}`
           const ctx = getContext()
           if (ctx) notify(ctx, message, "warning")
           else console.warn(message)
@@ -1291,7 +1292,7 @@ export default function (pi: ExtensionAPI) {
           return true
         } catch (error) {
           const ctx = sessionContext
-          const message = `Sandbox permission prompt failed for ${normalizedHost}: ${error instanceof Error ? error.message : error}`
+          const message = `Sandbox permission prompt failed for ${normalizedHost}: ${error instanceof Error ? error.message : String(error)}`
           if (ctx) notify(ctx, message, "warning")
           else console.warn(message)
           return false
@@ -1320,7 +1321,7 @@ export default function (pi: ExtensionAPI) {
       sandboxState = { status: "active", runtimeConfig: activeConfig }
       return activeConfig
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `${err}`
+      const errorMessage = err instanceof Error ? err.message : String(err)
       promptMode = DEFAULT_PROMPT_MODE
       pendingNetworkApprovals.clear()
       sandboxState = { status: "blocked", reason: "init-failed" }

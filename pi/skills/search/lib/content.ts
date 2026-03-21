@@ -1,7 +1,7 @@
 import { Readability } from "@mozilla/readability"
+import { gfm } from "@truto/turndown-plugin-gfm"
 import { JSDOM } from "jsdom"
 import TurndownService from "turndown"
-import { gfm } from "@truto/turndown-plugin-gfm"
 
 import type { SearchResult } from "./types.ts"
 

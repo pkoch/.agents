@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "dictionaries": ["bash", "project-words"],
+  "dictionaryDefinitions": [
+    { "name": "project-words", "path": "project-words.txt", "addWords": true }
+  ],
+  "ignorePaths": ["**/package.json", "project-words.txt"]
+}

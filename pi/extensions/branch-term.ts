@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process"
 import * as path from "node:path"
+
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
 import { SessionManager } from "@mariozechner/pi-coding-agent"
 

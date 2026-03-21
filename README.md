@@ -7,18 +7,18 @@ Reusable agent harness shared across Codex, Claude, and Pi. Shared skills live a
 Install all Node-based tools from the repo root:
 
 ```bash
-npm ci
+bun install
 ```
 
 ## Layout
 
 ```
 AGENTS.md              Shared base instructions (symlinked into each agent folder)
+bin/sync               Symlink everything into Codex, Claude, and Pi config dirs
 skills/                Skill source of truth (SKILL.md + optional scripts/assets)
+pi/agent/sandbox.json  Repo-managed Pi sandbox defaults
 pi/skills/             Pi-specific skills
 pi/extensions/         Pi-specific extensions
-pi/agent/sandbox.json  Repo-managed Pi sandbox defaults
-bin/sync               Symlink everything into Codex, Claude, and Pi config dirs
 ```
 
 ## Syncing

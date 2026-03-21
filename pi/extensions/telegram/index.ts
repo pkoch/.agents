@@ -1,15 +1,16 @@
+import { spawn } from "node:child_process"
+import fsp from "node:fs/promises"
+import net from "node:net"
+import os from "node:os"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
 import {
   BorderedLoader,
   type ExtensionAPI,
   type ExtensionContext,
   type ExtensionCommandContext,
 } from "@mariozechner/pi-coding-agent"
-import net from "node:net"
-import os from "node:os"
-import path from "node:path"
-import { fileURLToPath } from "node:url"
-import fsp from "node:fs/promises"
-import { spawn } from "node:child_process"
 
 type DaemonToClientMessage =
   | { type: "registered"; windowNo: number }

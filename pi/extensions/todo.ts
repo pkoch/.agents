@@ -1,3 +1,9 @@
+import crypto from "node:crypto"
+import { existsSync } from "node:fs"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+
 /**
  * Todoist-backed todo tool + /todo command.
  *
@@ -14,13 +20,8 @@ import {
   type ExtensionCommandContext,
   type ExtensionContext,
 } from "@mariozechner/pi-coding-agent"
-import { Type } from "@sinclair/typebox"
 import { Text } from "@mariozechner/pi-tui"
-import crypto from "node:crypto"
-import fs from "node:fs/promises"
-import { existsSync } from "node:fs"
-import os from "node:os"
-import path from "node:path"
+import { Type } from "@sinclair/typebox"
 
 const TODOIST_API_BASE_URL = "https://api.todoist.com"
 const TODOIST_API_V1_PREFIX = "/api/v1"
@@ -600,7 +601,6 @@ async function todoistRequest<T>(
         ...(options.body ? { "Content-Type": "application/json" } : {}),
         ...(options.requestId ? { "X-Request-Id": options.requestId } : {}),
       },
-      // oxlint-disable-next-line eslint-plugin-unicorn(no-invalid-fetch-options)
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
     })

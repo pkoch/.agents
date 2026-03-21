@@ -15,12 +15,13 @@
  *      Lists worktrees and their status.
  */
 
-import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@mariozechner/pi-coding-agent"
-import { DynamicBorder } from "@mariozechner/pi-coding-agent"
-import { Container, type SelectItem, SelectList, Text, matchesKey } from "@mariozechner/pi-tui"
 import { spawn, spawnSync } from "node:child_process"
 import * as fs from "node:fs"
 import * as path from "node:path"
+
+import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@mariozechner/pi-coding-agent"
+import { DynamicBorder } from "@mariozechner/pi-coding-agent"
+import { Container, type SelectItem, SelectList, Text, matchesKey } from "@mariozechner/pi-tui"
 
 const STATUS_KEY = "worktree"
 const TERMINAL_FLAG = "worktree-term"
@@ -717,7 +718,7 @@ function asCommand(value: unknown): string | null {
   return null
 }
 
-function readJsonFile(filePath: string): unknown | null {
+function readJsonFile(filePath: string): unknown {
   try {
     const raw = fs.readFileSync(filePath, "utf8")
     return JSON.parse(raw)

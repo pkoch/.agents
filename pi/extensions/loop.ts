@@ -6,7 +6,6 @@
  * signal_loop_success tool.
  */
 
-import { Type } from "@sinclair/typebox"
 import { complete, type Api, type Model, type UserMessage } from "@mariozechner/pi-ai"
 import type {
   ExtensionAPI,
@@ -14,8 +13,9 @@ import type {
   SessionSwitchEvent,
 } from "@mariozechner/pi-coding-agent"
 import { compact } from "@mariozechner/pi-coding-agent"
-import { Container, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui"
 import { DynamicBorder } from "@mariozechner/pi-coding-agent"
+import { Container, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui"
+import { Type } from "@sinclair/typebox"
 
 type LoopMode = "tests" | "custom" | "self"
 

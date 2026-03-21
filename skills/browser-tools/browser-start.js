@@ -4,6 +4,7 @@ import { spawn, execSync } from "node:child_process"
 import fs from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+
 import puppeteer from "puppeteer-core"
 
 const args = process.argv.slice(2)

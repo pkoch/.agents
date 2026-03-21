@@ -1,9 +1,10 @@
 import fs from "node:fs"
 import fsp from "node:fs/promises"
+import net from "node:net"
 import os from "node:os"
 import path from "node:path"
-import net from "node:net"
 import process from "node:process"
+
 import TelegramBot from "node-telegram-bot-api"
 
 const AGENT_DIR = path.join(os.homedir(), ".pi", "agent")
