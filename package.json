@@ -4,7 +4,6 @@
   "workspaces": [
     "pi/extensions",
     "pi/extensions/*",
-    "pi/skills/*",
     "skills/*"
   ],
   "devDependencies": {

@@ -1,6 +1,6 @@
 # .agents
 
-Reusable agent harness shared across Codex, Claude, and Pi. Shared skills live at the repo root; Pi-specific skills, extensions, and sandbox defaults live under `pi/`.
+Reusable agent harness shared across Codex, Claude, and Pi. Shared skills live at the repo root; Pi-specific extensions and sandbox defaults live under `pi/`.
 
 ## Setup
 
@@ -17,7 +17,6 @@ AGENTS.md              Shared base instructions (symlinked into each agent folde
 bin/sync               Symlink everything into Codex, Claude, and Pi config dirs
 skills/                Skill source of truth (SKILL.md + optional scripts/assets)
 pi/agent/sandbox.json  Repo-managed Pi sandbox defaults
-pi/skills/             Pi-specific skills
 pi/extensions/         Pi-specific extensions
 ```
 
@@ -46,15 +45,10 @@ pi/extensions/         Pi-specific extensions
 | `homeassistant-ops` | Operate a Home Assistant instance via REST/WebSocket APIs                         |
 | `openscad`          | Create and render OpenSCAD 3D models, export STL                                  |
 | `oracle`            | Second opinion from another LLM for debugging, refactors, design, or code reviews |
+| `search`            | Unified web search with automatic provider selection for current info             |
 | `sentry`            | Fetch and analyze Sentry issues, events, and logs                                 |
 | `update-changelog`  | Update CHANGELOG.md following Keep a Changelog                                    |
 | `web-design`        | Distinctive, production-ready web interfaces                                      |
-
-## Pi Skills
-
-| Skill    | Description                                                           |
-| -------- | --------------------------------------------------------------------- |
-| `search` | Unified web search with automatic provider selection for current info |
 
 ## Pi Extensions
 

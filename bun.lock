@@ -39,7 +39,7 @@
         "node-telegram-bot-api": "^0.66.0",
       },
     },
-    "pi/skills/search": {
+    "skills/search": {
       "name": "search",
       "version": "1.0.0",
       "dependencies": {
@@ -1280,7 +1280,7 @@
 
     "saxes": ["saxes@6.0.0", "", { "dependencies": { "xmlchars": "^2.2.0" } }, "sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA=="],
 
-    "search": ["search@workspace:pi/skills/search"],
+    "search": ["search@workspace:skills/search"],
 
     "semver": ["semver@7.7.4", "", { "bin": "bin/semver.js" }, "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA=="],
 

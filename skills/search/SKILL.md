@@ -55,9 +55,9 @@ export BRAVE_API_KEY="your-brave-api-key"
 ## Search
 
 ```bash
-"$HOME/.agents/pi/skills/search/index.ts" "query"          # Basic search (5 results)
-"$HOME/.agents/pi/skills/search/index.ts" "query" -n 10     # More results
-"$HOME/.agents/pi/skills/search/index.ts" "query" --content # Include page content as markdown (Kagi/Brave)
+"$HOME/.agents/skills/search/index.ts" "query"          # Basic search (5 results)
+"$HOME/.agents/skills/search/index.ts" "query" -n 10     # More results
+"$HOME/.agents/skills/search/index.ts" "query" --content # Include page content as markdown (Kagi/Brave)
 ```
 
 ### Options
@@ -68,5 +68,5 @@ export BRAVE_API_KEY="your-brave-api-key"
 ## Extract page content
 
 ```bash
-"$HOME/.agents/pi/skills/search/content.ts" https://example.com/article
+"$HOME/.agents/skills/search/content.ts" https://example.com/article
 ```
