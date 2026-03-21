@@ -1,9 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-import { connectBrowser, getActivePage } from "./utils.js"
+import { connectBrowser, getActivePage } from "./utils.ts"
 
 const args = process.argv.slice(2)
-const format = args.includes("--format=netscape") ? "netscape" : "human"
+const format: "netscape" | "human" = args.includes("--format=netscape") ? "netscape" : "human"
 
 const browser = await connectBrowser()
 const page = await getActivePage(browser)

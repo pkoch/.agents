@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Background logging for browser-tools.
@@ -24,6 +24,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import puppeteer from "puppeteer-core"
+import type { Browser, Page, Target } from "puppeteer-core"
 
 const DEFAULT_TMP = process.platform === "win32" ? tmpdir() : "/tmp"
 
@@ -32,11 +33,11 @@ const LOG_ROOT =
 
 const PID_FILE = join(LOG_ROOT, ".watch.pid")
 
-function ensureDir(dir) {
+function ensureDir(dir: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
 }
 
-function isProcessAlive(pid) {
+function isProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0)
     return true
@@ -45,7 +46,7 @@ function isProcessAlive(pid) {
   }
 }
 
-function getDateDir() {
+function getDateDir(): string {
   const now = new Date()
   const yyyy = String(now.getFullYear())
   const mm = String(now.getMonth() + 1).padStart(2, "0")
@@ -53,18 +54,18 @@ function getDateDir() {
   return join(LOG_ROOT, `${yyyy}-${mm}-${dd}`)
 }
 
-function safeFileName(value) {
+function safeFileName(value: unknown): string {
   return String(value).replace(/[^a-zA-Z0-9._-]/g, "_")
 }
 
-function nowIso() {
+function nowIso(): string {
   return new Date().toISOString()
 }
 
-async function connectBrowser(timeout = 5000) {
+async function connectBrowser(timeout = 5000): Promise<Browser> {
   return Promise.race([
     puppeteer.connect({ browserURL: "http://localhost:9222", defaultViewport: null }),
-    new Promise((_, reject) => {
+    new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error("timeout")), timeout).unref()
     }),
   ])
@@ -91,15 +92,16 @@ const dateDir = getDateDir()
 ensureDir(dateDir)
 
 // targetId -> { stream, filepath }
-const targetState = new Map()
-// request object -> requestId
-const requestIds = new WeakMap()
-// page -> targetId
-const pageToTarget = new WeakMap()
-const instrumentedPages = new WeakSet()
+const targetState = new Map<
+  string,
+  { stream: ReturnType<typeof createWriteStream>; filepath: string }
+>()
+const requestIds = new WeakMap<object, string>()
+const pageToTarget = new WeakMap<Page, string>()
+const instrumentedPages = new WeakSet<Page>()
 let nextSyntheticPageId = 1
 
-function getOrCreateTargetState(targetId) {
+function getOrCreateTargetState(targetId: string) {
   let state = targetState.get(targetId)
   if (state) return state
 
@@ -112,7 +114,7 @@ function getOrCreateTargetState(targetId) {
   return state
 }
 
-function writeLog(targetId, payload) {
+function writeLog(targetId: string, payload: Record<string, unknown>): void {
   const state = getOrCreateTargetState(targetId)
   const record = {
     ts: nowIso(),
@@ -122,16 +124,20 @@ function writeLog(targetId, payload) {
   state.stream.write(`${JSON.stringify(record)}\n`)
 }
 
-function internalTargetId(page) {
+function internalTargetId(page: Page): string | null {
   try {
-    const t = page.target?.()
-    return t?._targetId || t?._targetInfo?.targetId || t?._id || null
+    const target = page.target() as Target & {
+      _targetId?: string
+      _targetInfo?: { targetId?: string }
+      _id?: string
+    }
+    return target._targetId || target._targetInfo?.targetId || target._id || null
   } catch {
     return null
   }
 }
 
-function ensureTargetId(page) {
+function ensureTargetId(page: Page): string {
   const existing = pageToTarget.get(page)
   if (existing) return existing
 
@@ -141,14 +147,15 @@ function ensureTargetId(page) {
   return chosen
 }
 
-function ensureRequestId(targetId, request) {
-  if (requestIds.has(request)) return requestIds.get(request)
+function ensureRequestId(targetId: string, request: object): string {
+  const existing = requestIds.get(request)
+  if (existing) return existing
   const id = `${targetId}-${Math.random().toString(16).slice(2)}-${Date.now()}`
   requestIds.set(request, id)
   return id
 }
 
-function closeTarget(targetId) {
+function closeTarget(targetId: string): void {
   const state = targetState.get(targetId)
   if (!state) return
   try {
@@ -159,7 +166,7 @@ function closeTarget(targetId) {
   targetState.delete(targetId)
 }
 
-async function instrumentPage(page) {
+async function instrumentPage(page: Page): Promise<void> {
   if (instrumentedPages.has(page)) return
   instrumentedPages.add(page)
 
@@ -243,7 +250,7 @@ async function instrumentPage(page) {
         status: null,
         statusText: null,
         mimeType: null,
-        error: e?.message || String(e),
+        error: e instanceof Error ? e.message : String(e),
       })
     }
   })
@@ -274,7 +281,7 @@ async function instrumentPage(page) {
   })
 }
 
-function cleanupAndExit(code = 0) {
+function cleanupAndExit(code = 0): never {
   try {
     for (const targetId of targetState.keys()) {
       closeTarget(targetId)
@@ -292,10 +299,11 @@ function cleanupAndExit(code = 0) {
 process.on("SIGINT", () => cleanupAndExit(0))
 process.on("SIGTERM", () => cleanupAndExit(0))
 
-async function main() {
+async function main(): Promise<void> {
   const browser = await connectBrowser(5000).catch((e) => {
-    console.error("✗ Could not connect to browser:", e.message)
-    console.error("  Run: browser-start.js")
+    const message = e instanceof Error ? e.message : String(e)
+    console.error("✗ Could not connect to browser:", message)
+    console.error("  Run: browser-start.ts")
     process.exit(1)
   })
 

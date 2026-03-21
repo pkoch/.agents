@@ -1,15 +1,15 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-import { connectBrowser, getActivePage } from "./utils.js"
+import { connectBrowser, getActivePage } from "./utils.ts"
 
 const url = process.argv[2]
 const newTab = process.argv[3] === "--new"
 
 if (!url) {
-  console.log("Usage: browser-nav.js <url> [--new]")
+  console.log("Usage: browser-nav.ts <url> [--new]")
   console.log("\nExamples:")
-  console.log("  browser-nav.js https://example.com       # Navigate current tab")
-  console.log("  browser-nav.js https://example.com --new # Open in new tab")
+  console.log("  browser-nav.ts https://example.com       # Navigate current tab")
+  console.log("  browser-nav.ts https://example.com --new # Open in new tab")
   process.exit(1)
 }
 

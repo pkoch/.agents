@@ -1,6 +1,6 @@
 pre-push:
   jobs:
-    - run: npm audit
+    - run: bun audit
 
 pre-commit:
   parallel: true

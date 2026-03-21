@@ -1,12 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-import { connectBrowser, getActivePage, printResult } from "./utils.js"
+import { connectBrowser, getActivePage, printResult } from "./utils.ts"
 
 const message = process.argv.slice(2).join(" ")
 if (!message) {
-  console.log("Usage: browser-pick.js 'message'")
+  console.log("Usage: browser-pick.ts 'message'")
   console.log("\nExample:")
-  console.log('  browser-pick.js "Click the submit button"')
+  console.log('  browser-pick.ts "Click the submit button"')
   process.exit(1)
 }
 
@@ -15,14 +15,31 @@ const page = await getActivePage(browser)
 
 // Inject pick() helper into current page
 await page.evaluate(() => {
-  if (!window.pick) {
-    window.pick = async (message) => {
+  type ElementInfo = {
+    tag: string
+    id: string | null
+    class: string | null
+    text: string | null
+    html: string
+    parents: string
+  }
+
+  type PickResult = ElementInfo | ElementInfo[] | null
+  type PickWindow = Window &
+    typeof globalThis & {
+      pick?: (message: string) => Promise<PickResult>
+    }
+
+  const pickWindow = window as PickWindow
+
+  if (!pickWindow.pick) {
+    pickWindow.pick = async (message: string) => {
       if (!message) {
         throw new Error("pick() requires a message parameter")
       }
-      return new Promise((resolve) => {
-        const selections = []
-        const selectedElements = new Set()
+      return new Promise<PickResult>((resolve) => {
+        const selections: ElementInfo[] = []
+        const selectedElements = new Set<HTMLElement>()
 
         const overlay = document.createElement("div")
         overlay.style.cssText =
@@ -55,22 +72,21 @@ await page.evaluate(() => {
           })
         }
 
-        const onMove = (e) => {
+        const onMove = (e: MouseEvent) => {
           const el = document.elementFromPoint(e.clientX, e.clientY)
-          if (!el || overlay.contains(el) || banner.contains(el)) return
+          if (!(el instanceof HTMLElement) || overlay.contains(el) || banner.contains(el)) return
           const r = el.getBoundingClientRect()
           highlight.style.cssText = `position:absolute;border:2px solid #3b82f6;background:rgba(59,130,246,0.1);top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px`
         }
 
-        const buildElementInfo = (el) => {
-          const parents = []
+        const buildElementInfo = (el: HTMLElement): ElementInfo => {
+          const parents: string[] = []
           let current = el.parentElement
           while (current && current !== document.body) {
             const parentInfo = current.tagName.toLowerCase()
             const id = current.id ? `#${current.id}` : ""
-            const cls = current.className
-              ? `.${current.className.trim().split(/\s+/).join(".")}`
-              : ""
+            const className = typeof current.className === "string" ? current.className : ""
+            const cls = className ? `.${className.trim().split(/\s+/).join(".")}` : ""
             parents.push(parentInfo + id + cls)
             current = current.parentElement
           }
@@ -85,12 +101,12 @@ await page.evaluate(() => {
           }
         }
 
-        const onClick = (e) => {
-          if (banner.contains(e.target)) return
+        const onClick = (e: MouseEvent) => {
+          if (e.target instanceof Node && banner.contains(e.target)) return
           e.preventDefault()
           e.stopPropagation()
           const el = document.elementFromPoint(e.clientX, e.clientY)
-          if (!el || overlay.contains(el) || banner.contains(el)) return
+          if (!(el instanceof HTMLElement) || overlay.contains(el) || banner.contains(el)) return
 
           if (e.metaKey || e.ctrlKey) {
             if (!selectedElements.has(el)) {
@@ -106,7 +122,7 @@ await page.evaluate(() => {
           }
         }
 
-        const onKey = (e) => {
+        const onKey = (e: KeyboardEvent) => {
           if (e.key === "Escape") {
             e.preventDefault()
             cleanup()
@@ -126,7 +142,25 @@ await page.evaluate(() => {
   }
 })
 
-const result = await page.evaluate((msg) => window.pick(msg), message)
+const result = await page.evaluate((msg) => {
+  type ElementInfo = {
+    tag: string
+    id: string | null
+    class: string | null
+    text: string | null
+    html: string
+    parents: string
+  }
+
+  type PickResult = ElementInfo | ElementInfo[] | null
+  type PickWindow = Window &
+    typeof globalThis & {
+      pick?: (message: string) => Promise<PickResult>
+    }
+
+  const pickWindow = window as PickWindow
+  return pickWindow.pick?.(msg) ?? null
+}, message)
 
 printResult(result)
 

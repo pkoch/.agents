@@ -28,10 +28,10 @@ If a provider is available but fails at runtime (auth, quota, transient errors),
 Install dependencies (run once):
 
 ```bash
-npm ci
+bun install
 ```
 
-Run from the repo root (`$HOME/.agents`). If you only want this package, use `npm ci -w search`.
+Run from the repo root (`$HOME/.agents`). If you only want this package, use `bun install --filter search`.
 
 ### (Optional) Configure API keys
 

@@ -11,7 +11,7 @@ FILE_SELECTORS=()
 usage() {
   cat <<'EOF'
 Usage:
-  oracle-bundle -p "<task>" --file "path|dir|glob" [--file "..."] [--dry-run] [--max-bytes N]
+  oracle-bundle.sh -p "<task>" --file "path|dir|glob" [--file "..."] [--dry-run] [--max-bytes N]
 
 Notes:
   - Runs from the git repo root when inside a repo; otherwise uses $PWD.

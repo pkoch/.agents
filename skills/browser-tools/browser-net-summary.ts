@@ -1,11 +1,11 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Summarize network activity from browser-watch JSONL logs.
  *
  * Usage:
- *   browser-net-summary.js              # summarize latest log
- *   browser-net-summary.js --file <path>
+ *   browser-net-summary.ts              # summarize latest log
+ *   browser-net-summary.ts --file <path>
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
@@ -17,7 +17,7 @@ const DEFAULT_TMP = process.platform === "win32" ? tmpdir() : "/tmp"
 const LOG_ROOT =
   process.env.BROWSER_TOOLS_LOG_ROOT || join(DEFAULT_TMP, "agent-browser-tools", "logs")
 
-function statSafe(path) {
+function statSafe(path: string) {
   try {
     return statSync(path)
   } catch {
@@ -25,7 +25,7 @@ function statSafe(path) {
   }
 }
 
-function findLatestFile() {
+function findLatestFile(): string | null {
   if (!existsSync(LOG_ROOT)) return null
 
   const dirs = readdirSync(LOG_ROOT)
@@ -47,7 +47,7 @@ function findLatestFile() {
 }
 
 const args = process.argv.slice(2)
-let filePath = null
+let filePath: string | null = null
 const fileIdx = args.indexOf("--file")
 if (fileIdx !== -1) filePath = args[fileIdx + 1]
 if (!filePath) filePath = findLatestFile()
@@ -57,19 +57,24 @@ if (!filePath) {
   process.exit(1)
 }
 
-const statusCounts = new Map()
-const failures = []
+const statusCounts = new Map<string, number>()
+const failures: Array<{ requestId?: string; errorText?: string; url?: string }> = []
 let totalResponses = 0
 let totalRequests = 0
 
 try {
+  if (!filePath) {
+    console.error("✗ No log file found")
+    process.exit(1)
+  }
+
   const data = readFileSync(filePath, "utf8")
   const lines = data.split("\n").filter(Boolean)
 
   for (const line of lines) {
-    let entry
+    let entry: Record<string, unknown>
     try {
-      entry = JSON.parse(line)
+      entry = JSON.parse(line) as Record<string, unknown>
     } catch {
       continue
     }
@@ -78,18 +83,21 @@ try {
       totalRequests += 1
     } else if (entry.type === "network.response") {
       totalResponses += 1
-      const status = String(entry.status ?? "unknown")
+      const status =
+        typeof entry.status === "number" || typeof entry.status === "string"
+          ? String(entry.status)
+          : "unknown"
       statusCounts.set(status, (statusCounts.get(status) || 0) + 1)
     } else if (entry.type === "network.failure") {
       failures.push({
-        requestId: entry.requestId,
-        errorText: entry.errorText,
-        url: entry.url,
+        requestId: typeof entry.requestId === "string" ? entry.requestId : undefined,
+        errorText: typeof entry.errorText === "string" ? entry.errorText : undefined,
+        url: typeof entry.url === "string" ? entry.url : undefined,
       })
     }
   }
 } catch (e) {
-  console.error("✗ summary failed:", e.message)
+  console.error("✗ summary failed:", e instanceof Error ? e.message : String(e))
   process.exit(1)
 }
 

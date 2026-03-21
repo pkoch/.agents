@@ -12,19 +12,19 @@ Chrome DevTools Protocol tools for agent-assisted web automation. These tools co
 Run once before first use:
 
 ```bash
-npm ci
+bun install
 ```
 
-Run from the repo root (`$HOME/.agents`). If you only want this package, use `npm ci -w browser-tools`.
+Run from the repo root (`$HOME/.agents`). If you only want this package, use `bun install --filter browser-tools`.
 
 ## Start Chromium / Chrome
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-start.js"              # Fresh profile
-"$HOME/.agents/skills/browser-tools/browser-start.js" --profile    # Copy your profile (cookies, logins)
-"$HOME/.agents/skills/browser-tools/browser-start.js" --watch      # Start background JSONL logging
-"$HOME/.agents/skills/browser-tools/browser-start.js" --browser chromium
-"$HOME/.agents/skills/browser-tools/browser-start.js" --browser chrome
+"$HOME/.agents/skills/browser-tools/browser-start.ts"              # Fresh profile
+"$HOME/.agents/skills/browser-tools/browser-start.ts" --profile    # Copy your profile (cookies, logins)
+"$HOME/.agents/skills/browser-tools/browser-start.ts" --watch      # Start background JSONL logging
+"$HOME/.agents/skills/browser-tools/browser-start.ts" --browser chromium
+"$HOME/.agents/skills/browser-tools/browser-start.ts" --browser chrome
 ```
 
 Launch a browser with remote debugging on `:9222`. Use `--profile` to preserve your authentication state.
@@ -38,8 +38,8 @@ If the auto-detection picks the wrong browser, set:
 ## Navigate
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-nav.js" https://example.com
-"$HOME/.agents/skills/browser-tools/browser-nav.js" https://example.com --new
+"$HOME/.agents/skills/browser-tools/browser-nav.ts" https://example.com
+"$HOME/.agents/skills/browser-tools/browser-nav.ts" https://example.com --new
 ```
 
 Navigate to URLs. Use `--new` flag to open in a new tab instead of reusing current tab.
@@ -47,8 +47,8 @@ Navigate to URLs. Use `--new` flag to open in a new tab instead of reusing curre
 ## Evaluate JavaScript
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-eval.js" 'document.title'
-"$HOME/.agents/skills/browser-tools/browser-eval.js" 'document.querySelectorAll("a").length'
+"$HOME/.agents/skills/browser-tools/browser-eval.ts" 'document.title'
+"$HOME/.agents/skills/browser-tools/browser-eval.ts" 'document.querySelectorAll("a").length'
 ```
 
 Execute JavaScript in the active tab. Code runs in async context. Use this to extract data, inspect page state, or perform DOM operations programmatically.
@@ -56,13 +56,13 @@ Execute JavaScript in the active tab. Code runs in async context. Use this to ex
 For multi-line code or statements, wrap in an IIFE:
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-eval.js" '(() => { const x = 1; return x + 1; })()'
+"$HOME/.agents/skills/browser-tools/browser-eval.ts" '(() => { const x = 1; return x + 1; })()'
 ```
 
 ## Screenshot
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-screenshot.js"
+"$HOME/.agents/skills/browser-tools/browser-screenshot.ts"
 ```
 
 Capture current viewport and return temporary file path. Use this to visually inspect page state or verify UI changes.
@@ -70,7 +70,7 @@ Capture current viewport and return temporary file path. Use this to visually in
 ## Pick Elements
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-pick.js" "Click the submit button"
+"$HOME/.agents/skills/browser-tools/browser-pick.ts" "Click the submit button"
 ```
 
 Use this when the user wants to select specific DOM elements on the page. This launches an interactive picker: click elements to select them, Cmd/Ctrl+Click for multi-select, Enter to finish.
@@ -78,8 +78,8 @@ Use this when the user wants to select specific DOM elements on the page. This l
 ## Dismiss cookie banners
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-dismiss-cookies.js"          # Accept cookies
-"$HOME/.agents/skills/browser-tools/browser-dismiss-cookies.js" --reject # Reject (where possible)
+"$HOME/.agents/skills/browser-tools/browser-dismiss-cookies.ts"          # Accept cookies
+"$HOME/.agents/skills/browser-tools/browser-dismiss-cookies.ts" --reject # Reject (where possible)
 ```
 
 Run after navigation if cookie dialogs interfere with interaction.
@@ -87,8 +87,8 @@ Run after navigation if cookie dialogs interfere with interaction.
 ## Cookies
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-cookies.js"
-"$HOME/.agents/skills/browser-tools/browser-cookies.js" --format=netscape > cookies.txt
+"$HOME/.agents/skills/browser-tools/browser-cookies.ts"
+"$HOME/.agents/skills/browser-tools/browser-cookies.ts" --format=netscape > cookies.txt
 ```
 
 Display all cookies for the current tab including domain, path, httpOnly, and secure flags.
@@ -98,7 +98,7 @@ The `--format=netscape` option outputs cookies in Netscape format for use with c
 ## Extract Page Content
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-content.js" https://example.com
+"$HOME/.agents/skills/browser-tools/browser-content.ts" https://example.com
 ```
 
 Navigate to a URL and extract readable content as markdown. Uses Mozilla Readability for article extraction and Turndown for HTML-to-markdown conversion.
@@ -108,13 +108,13 @@ Navigate to a URL and extract readable content as markdown. Uses Mozilla Readabi
 Start the watcher:
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-watch.js"
+"$HOME/.agents/skills/browser-tools/browser-watch.ts"
 ```
 
 Or launch the browser with logging enabled:
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-start.js" --watch
+"$HOME/.agents/skills/browser-tools/browser-start.ts" --watch
 ```
 
 Logs are written as JSONL to a temp directory by default:
@@ -125,15 +125,15 @@ Logs are written as JSONL to a temp directory by default:
 Tail the most recent log:
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-logs-tail.js"           # dump and exit
-"$HOME/.agents/skills/browser-tools/browser-logs-tail.js" --follow  # follow
+"$HOME/.agents/skills/browser-tools/browser-logs-tail.ts"           # dump and exit
+"$HOME/.agents/skills/browser-tools/browser-logs-tail.ts" --follow  # follow
 ```
 
 Summarize network responses (status codes, failures):
 
 ```bash
-"$HOME/.agents/skills/browser-tools/browser-net-summary.js"
-"$HOME/.agents/skills/browser-tools/browser-net-summary.js" --file /path/to/log.jsonl
+"$HOME/.agents/skills/browser-tools/browser-net-summary.ts"
+"$HOME/.agents/skills/browser-tools/browser-net-summary.ts" --file /path/to/log.jsonl
 ```
 
 ## When to Use

@@ -1,9 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { connectBrowser, getActivePage } from "./utils.js"
+import { connectBrowser, getActivePage } from "./utils.ts"
 
 const browser = await connectBrowser()
 const page = await getActivePage(browser)

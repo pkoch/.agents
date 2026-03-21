@@ -37,18 +37,14 @@ pi/extensions/         Pi-specific extensions
 
 ## Skills
 
-| Skill               | Description                                                                       |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `browser-tools`     | Interactive browser automation via Chrome DevTools Protocol                       |
-| `git-clean-history` | Reimplement a branch on a fresh branch off `main` with a clean commit history     |
-| `git-commit`        | Tidy, focused commits with clear rationale in messages                            |
-| `homeassistant-ops` | Operate a Home Assistant instance via REST/WebSocket APIs                         |
-| `openscad`          | Create and render OpenSCAD 3D models, export STL                                  |
-| `oracle`            | Second opinion from another LLM for debugging, refactors, design, or code reviews |
-| `search`            | Unified web search with automatic provider selection for current info             |
-| `sentry`            | Fetch and analyze Sentry issues, events, and logs                                 |
-| `update-changelog`  | Update CHANGELOG.md following Keep a Changelog                                    |
-| `web-design`        | Distinctive, production-ready web interfaces                                      |
+| Skill              | Description                                                                       |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `browser-tools`    | Interactive browser automation via Chrome DevTools Protocol                       |
+| `git-commit`       | Tidy, focused commits with clear rationale in messages                            |
+| `oracle`           | Second opinion from another LLM for debugging, refactors, design, or code reviews |
+| `search`           | Unified web search with automatic provider selection for current info             |
+| `update-changelog` | Update CHANGELOG.md following Keep a Changelog                                    |
+| `web-design`       | Distinctive, production-ready web interfaces                                      |
 
 ## Pi Extensions
 
@@ -65,6 +61,5 @@ pi/extensions/         Pi-specific extensions
 | `review`            | `/review`, `/triage`, `/fix` | Review PRs, branches, commits, or uncommitted changes                          |
 | `sandbox`           | `/sandbox`                   | OS-level sandboxing for bash commands with runtime overrides                   |
 | `session-breakdown` | `/session-breakdown`         | Usage stats and contribution-style calendar                                    |
-| `telegram`          | `/telegram`                  | Interact with Pi through a Telegram bot bridge                                 |
 | `todo`              | `/todo`                      | Todoist-backed tasks with offline outbox sync for single or multi-session work |
 | `worktree`          | `/worktree`                  | Create and manage git worktrees                                                |

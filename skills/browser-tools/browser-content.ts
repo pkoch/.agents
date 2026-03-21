@@ -1,11 +1,11 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { Readability } from "@mozilla/readability"
+import { gfm } from "@truto/turndown-plugin-gfm"
 import { JSDOM } from "jsdom"
 import TurndownService from "turndown"
-import { gfm } from "turndown-plugin-gfm"
 
-import { connectBrowser, getActivePage } from "./utils.js"
+import { connectBrowser, getActivePage } from "./utils.ts"
 
 // Global timeout - exit if script takes too long
 const TIMEOUT = 30000
@@ -17,11 +17,11 @@ setTimeout(() => {
 const url = process.argv[2]
 
 if (!url) {
-  console.log("Usage: browser-content.js <url>")
+  console.log("Usage: browser-content.ts <url>")
   console.log("\nExtracts readable content from a URL as markdown.")
   console.log("\nExamples:")
-  console.log("  browser-content.js https://example.com")
-  console.log("  browser-content.js https://en.wikipedia.org/wiki/Rust_(programming_language)")
+  console.log("  browser-content.ts https://example.com")
+  console.log("  browser-content.ts https://en.wikipedia.org/wiki/Rust_(programming_language)")
   process.exit(1)
 }
 
@@ -30,7 +30,7 @@ const page = await getActivePage(browser)
 
 await Promise.race([
   page.goto(url, { waitUntil: "networkidle2" }),
-  new Promise((r) => setTimeout(r, 10000)),
+  new Promise<void>((resolve) => setTimeout(resolve, 10000)),
 ]).catch(() => {})
 
 // Get HTML via CDP (works even with TrustedScriptURL restrictions)
@@ -52,7 +52,7 @@ const reader = new Readability(doc.window.document)
 const article = reader.parse()
 
 // Convert to markdown
-function htmlToMarkdown(html) {
+function htmlToMarkdown(html: string): string {
   const turndown = new TurndownService({
     headingStyle: "atx",
     codeBlockStyle: "fenced",
@@ -72,7 +72,7 @@ function htmlToMarkdown(html) {
     .trim()
 }
 
-let content
+let content = ""
 if (article && article.content) {
   content = htmlToMarkdown(article.content)
 } else {

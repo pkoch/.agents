@@ -1,28 +1,33 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Dismiss common cookie consent dialogs.
  *
  * Usage:
- *   browser-dismiss-cookies.js          # accept cookies
- *   browser-dismiss-cookies.js --reject # reject cookies (where possible)
+ *   browser-dismiss-cookies.ts          # accept cookies
+ *   browser-dismiss-cookies.ts --reject # reject cookies (where possible)
  */
 
-import { connectBrowser, getActivePage } from "./utils.js"
+import { connectBrowser, getActivePage } from "./utils.ts"
 
 const reject = process.argv.includes("--reject")
 const mode = reject ? "reject" : "accept"
 const acceptCookies = !reject
 
 const DEBUG = process.env.DEBUG === "1"
-const log = DEBUG ? (...args) => console.error("[debug]", ...args) : () => {}
+const log: (...args: unknown[]) => void = DEBUG
+  ? (...args) => console.error("[debug]", ...args)
+  : () => {}
 
 // Mostly ported from mitsuhiko/agent-stuff web-browser skill.
-const COOKIE_DISMISS_FN = (acceptCookies) => {
-  const clicked = []
+const COOKIE_DISMISS_FN = (acceptCookies: boolean): string[] => {
+  type ClickableElement = HTMLElement
+  type Pattern = string | RegExp
 
-  const isVisible = (el) => {
-    if (!el) return false
+  const clicked: string[] = []
+
+  const isVisible = (el: Element | null): el is ClickableElement => {
+    if (!(el instanceof HTMLElement)) return false
     const style = getComputedStyle(el)
     return (
       style.display !== "none" &&
@@ -32,29 +37,32 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
     )
   }
 
-  const tryClick = (selector, description) => {
+  const tryClick = (selector: string | ClickableElement, description?: string) => {
     const el = typeof selector === "string" ? document.querySelector(selector) : selector
     if (isVisible(el)) {
       el.click()
-      clicked.push(description || selector)
+      clicked.push(description || (typeof selector === "string" ? selector : el.tagName))
       return true
     }
     return false
   }
 
-  const findButtonByText = (patterns, container = document) => {
+  const findButtonByText = (patterns: Pattern[], container: ParentNode = document) => {
     const buttons = Array.from(
-      container.querySelectorAll(
+      container.querySelectorAll<ClickableElement>(
         'button, [role="button"], a.button, input[type="submit"], input[type="button"]',
       ),
     )
 
     // Sort patterns by length descending to match more specific patterns first.
-    const sortedPatterns = [...patterns].sort((a, b) => b.length - a.length)
+    const patternWeight = (pattern: Pattern) =>
+      typeof pattern === "string" ? pattern.length : pattern.source.length
+    const sortedPatterns = [...patterns].sort((a, b) => patternWeight(b) - patternWeight(a))
 
     for (const pattern of sortedPatterns) {
       for (const btn of buttons) {
-        const text = (btn.textContent || btn.value || "").trim().toLowerCase()
+        const value = btn instanceof HTMLInputElement ? btn.value : ""
+        const text = (btn.textContent || value || "").trim().toLowerCase()
         if (text.length > 100) continue
         if (!isVisible(btn)) continue
         if (typeof pattern === "string" ? text.includes(pattern) : pattern.test(text)) {
@@ -146,11 +154,12 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
 
   // YouTube
   if (document.querySelector("ytd-consent-bump-v2-lightbox")) {
-    const btn = Array.from(document.querySelectorAll("ytd-consent-bump-v2-lightbox button")).find(
-      (b) =>
-        acceptCookies
-          ? b.textContent.includes("Accept all") || b.ariaLabel?.includes("Accept")
-          : b.textContent.includes("Reject all") || b.ariaLabel?.includes("Reject"),
+    const btn = Array.from(
+      document.querySelectorAll<ClickableElement>("ytd-consent-bump-v2-lightbox button"),
+    ).find((b) =>
+      acceptCookies
+        ? (b.textContent ?? "").includes("Accept all") || b.ariaLabel?.includes("Accept")
+        : (b.textContent ?? "").includes("Reject all") || b.ariaLabel?.includes("Reject"),
     )
     if (btn) {
       btn.click()
@@ -168,7 +177,7 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
   }
 
   // Didomi
-  if (document.querySelector("#didomi-host") || window.Didomi) {
+  if (document.querySelector("#didomi-host") || "Didomi" in window) {
     const selector = acceptCookies
       ? "#didomi-notice-agree-button"
       : '#didomi-notice-disagree-button, [data-testid="disagree-button"]'
@@ -188,8 +197,8 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
   if (ucRoot && ucRoot.shadowRoot) {
     const shadow = ucRoot.shadowRoot
     const btn = acceptCookies
-      ? shadow.querySelector('[data-testid="uc-accept-all-button"]')
-      : shadow.querySelector('[data-testid="uc-deny-all-button"]')
+      ? shadow.querySelector<HTMLElement>('[data-testid="uc-accept-all-button"]')
+      : shadow.querySelector<HTMLElement>('[data-testid="uc-deny-all-button"]')
     if (btn) {
       btn.click()
       clicked.push("Usercentrics")
@@ -299,7 +308,7 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
 
     const singleWordPatterns = acceptCookies ? ["accept", "agree"] : ["reject", "decline"]
 
-    const buttons = document.querySelectorAll("button, [role='button']")
+    const buttons = document.querySelectorAll<ClickableElement>("button, [role='button']")
     for (const btn of buttons) {
       if (!isVisible(btn)) continue
       const text = (btn.textContent || "").trim().toLowerCase()
@@ -324,11 +333,13 @@ const COOKIE_DISMISS_FN = (acceptCookies) => {
   return clicked
 }
 
-const IFRAME_DISMISS_FN = (acceptCookies) => {
-  const clicked = []
+const IFRAME_DISMISS_FN = (acceptCookies: boolean): string[] => {
+  type ClickableElement = HTMLElement
 
-  const isVisible = (el) => {
-    if (!el) return false
+  const clicked: string[] = []
+
+  const isVisible = (el: Element | null): el is ClickableElement => {
+    if (!(el instanceof HTMLElement)) return false
     const style = getComputedStyle(el)
     return (
       style.display !== "none" &&
@@ -373,11 +384,11 @@ const IFRAME_DISMISS_FN = (acceptCookies) => {
     "aceptar",
   ]
 
-  const isRejectButton = (text) => rejectIndicators.some((p) => text.includes(p))
-  const isAcceptButton = (text) =>
+  const isRejectButton = (text: string) => rejectIndicators.some((p) => text.includes(p))
+  const isAcceptButton = (text: string) =>
     acceptIndicators.some((p) => text.includes(p)) && !isRejectButton(text)
 
-  const buttons = document.querySelectorAll("button, [role='button']")
+  const buttons = document.querySelectorAll<ClickableElement>("button, [role='button']")
   for (const btn of buttons) {
     const text = (btn.textContent || "").trim().toLowerCase()
     if (!isVisible(btn)) continue
@@ -390,8 +401,12 @@ const IFRAME_DISMISS_FN = (acceptCookies) => {
   }
 
   const spBtn = acceptCookies
-    ? document.querySelector('[title="Accept All"], [title="Accept"], [aria-label*="Accept"]')
-    : document.querySelector('[title="Reject All"], [title="Reject"], [aria-label*="Reject"]')
+    ? document.querySelector<HTMLElement>(
+        '[title="Accept All"], [title="Accept"], [aria-label*="Accept"]',
+      )
+    : document.querySelector<HTMLElement>(
+        '[title="Reject All"], [title="Reject"], [aria-label*="Reject"]',
+      )
 
   if (spBtn) {
     spBtn.click()
@@ -402,7 +417,7 @@ const IFRAME_DISMISS_FN = (acceptCookies) => {
   return clicked
 }
 
-const looksLikeConsentFrame = (url) => {
+const looksLikeConsentFrame = (url: string): boolean => {
   if (!url) return false
   return (
     url.includes("sp_message") ||
@@ -419,7 +434,7 @@ const browser = await connectBrowser()
 const page = await getActivePage(browser)
 
 // Give dialogs a moment to appear after navigation.
-await page.waitForTimeout(500)
+await new Promise<void>((resolve) => setTimeout(resolve, 500))
 
 log("trying main page...")
 let result = await page.evaluate(COOKIE_DISMISS_FN, acceptCookies)
@@ -439,7 +454,7 @@ if (result.length === 0) {
       }
     } catch (e) {
       // Cross-origin frames often fail; ignore.
-      log("frame evaluate failed:", url, e?.message)
+      log("frame evaluate failed:", url, e instanceof Error ? e.message : String(e))
     }
   }
 }

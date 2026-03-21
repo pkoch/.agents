@@ -1,12 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Tail browser-watch JSONL logs.
  *
  * Usage:
- *   browser-logs-tail.js                # dump latest log and exit
- *   browser-logs-tail.js --follow       # keep following
- *   browser-logs-tail.js --file <path>  # explicit file
+ *   browser-logs-tail.ts                # dump latest log and exit
+ *   browser-logs-tail.ts --follow       # keep following
+ *   browser-logs-tail.ts --file <path>  # explicit file
  */
 
 import { existsSync, readdirSync, readFileSync, statSync, watch } from "node:fs"
@@ -18,7 +18,7 @@ const DEFAULT_TMP = process.platform === "win32" ? tmpdir() : "/tmp"
 const LOG_ROOT =
   process.env.BROWSER_TOOLS_LOG_ROOT || join(DEFAULT_TMP, "agent-browser-tools", "logs")
 
-function statSafe(path) {
+function statSafe(path: string) {
   try {
     return statSync(path)
   } catch {
@@ -26,7 +26,7 @@ function statSafe(path) {
   }
 }
 
-function findLatestFile() {
+function findLatestFile(): string | null {
   if (!existsSync(LOG_ROOT)) return null
 
   const dirs = readdirSync(LOG_ROOT)
@@ -50,7 +50,7 @@ function findLatestFile() {
 const args = process.argv.slice(2)
 const follow = args.includes("--follow")
 
-let filePath = null
+let filePath: string | null = null
 const fileIdx = args.indexOf("--file")
 if (fileIdx !== -1) filePath = args[fileIdx + 1]
 if (!filePath) filePath = findLatestFile()
@@ -63,12 +63,14 @@ if (!filePath) {
 let offset = 0
 
 function readAll() {
+  if (!filePath) return
   if (!existsSync(filePath)) return
   const data = readFileSync(filePath, "utf8")
   if (data.length > 0) process.stdout.write(data)
 }
 
 function readNew() {
+  if (!filePath) return
   if (!existsSync(filePath)) return
   const data = readFileSync(filePath, "utf8")
   if (data.length <= offset) return
@@ -84,6 +86,6 @@ try {
   watch(filePath, { persistent: true }, () => readNew())
   console.log(`✓ tailing ${filePath}`)
 } catch (e) {
-  console.error("✗ tail failed:", e.message)
+  console.error("✗ tail failed:", e instanceof Error ? e.message : String(e))
   process.exit(1)
 }

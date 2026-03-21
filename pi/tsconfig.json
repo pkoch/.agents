@@ -1,19 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "ES2023",
-    "lib": ["ES2023"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "strict": true,
-    "noEmit": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": ["node"]
-  },
+  "extends": "../tsconfig.base.json",
   "include": ["./**/*.ts", "./**/*.d.ts"],
   "exclude": ["./**/node_modules", "./**/dist", "./**/build"]
 }

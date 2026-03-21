@@ -1,5 +1,5 @@
 # Codex-side notes (Oracle)
 
-`scripts/oracle-to-claude` runs:
+`scripts/oracle-to-claude.sh` runs:
 
-- `claude -p --model opus-4.6 --tools ""`
+- `claude -p --model opus --tools ""`

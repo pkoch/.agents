@@ -35,7 +35,7 @@
  *
  * Setup:
  * 1. Copy sandbox/ directory to ~/.pi/agent/extensions/
- * 2. Run `npm ci` in ~/.pi/agent/extensions/sandbox/
+ * 2. Run `bun install` in ~/.pi/agent/extensions/sandbox/
  *
  * Linux also requires: bubblewrap, socat, ripgrep
  */

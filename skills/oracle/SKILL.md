@@ -14,7 +14,7 @@ Use this skill when you want a “second brain” pass from an _opposite model f
 
 1. Pick the smallest file set that contains the truth (avoid secrets by default).
 2. Verify the selected files / bundle look right.
-3. Run the oracle target you want: **Claude** (`oracle-to-claude`) if your current session is using an OpenAI model, **GPT-5.3-Codex** (`oracle-to-codex`) otherwise.
+3. Run the oracle target you want: **Claude** (`oracle-to-claude.sh`) if your current session is using an OpenAI model, **GPT-5.3-Codex** (`oracle-to-codex.sh`) otherwise.
 
 ## Commands
 
@@ -22,16 +22,16 @@ From the skill directory:
 
 ```bash
 # Preview selection
-$HOME/.agents/skills/oracle/scripts/oracle-bundle --dry-run -p "<task>" --file "src/**" --file "!**/*.test.*"
+$HOME/.agents/skills/oracle/scripts/oracle-bundle.sh --dry-run -p "<task>" --file "src/**" --file "!**/*.test.*"
 
 # Preview bundle
-$HOME/.agents/skills/oracle/scripts/oracle-bundle -p "<task>" --file "src/**" --file "!**/*.test.*"
+$HOME/.agents/skills/oracle/scripts/oracle-bundle.sh -p "<task>" --file "src/**" --file "!**/*.test.*"
 
 # Ask Claude Opus (Anthropic) if running under a model powered by OpenAI
-$HOME/.agents/skills/oracle/scripts/oracle-to-claude -p "<task>" --file "src/**" --file "!**/*.test.*"
+$HOME/.agents/skills/oracle/scripts/oracle-to-claude.sh -p "<task>" --file "src/**" --file "!**/*.test.*"
 
 # Ask GPT-5.3-Codex (OpenAI) if running under any other model
-$HOME/.agents/skills/oracle/scripts/oracle-to-codex -p "<task>" --file "src/**" --file "!**/*.test.*"
+$HOME/.agents/skills/oracle/scripts/oracle-to-codex.sh -p "<task>" --file "src/**" --file "!**/*.test.*"
 ```
 
 ## Tips
