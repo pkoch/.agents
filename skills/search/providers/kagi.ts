@@ -23,16 +23,28 @@ function getApiKey(): string | null {
   return process.env.KAGI_API_KEY?.trim() || null
 }
 
+function normalizeSnippetHtml(snippet: unknown): string {
+  if (typeof snippet === "string") return snippet
+  if (typeof snippet === "number" || typeof snippet === "boolean" || typeof snippet === "bigint") {
+    return String(snippet)
+  }
+
+  return ""
+}
+
 function htmlSnippetToText(snippet: unknown): string {
   if (!snippet) return ""
 
+  const html = normalizeSnippetHtml(snippet)
+  if (!html) return ""
+
   // Kagi snippets can include HTML (e.g. <b> highlights) and entities.
   try {
-    const dom = new JSDOM(`<!doctype html><body>${String(snippet)}</body>`)
+    const dom = new JSDOM(`<!doctype html><body>${html}</body>`)
     const text = dom.window.document.body.textContent || ""
     return text.replace(/\s+/g, " ").trim()
   } catch {
-    return String(snippet)
+    return html
       .replace(/<[^>]*>/g, " ")
       .replace(/\s+/g, " ")
       .trim()
@@ -42,8 +54,13 @@ function htmlSnippetToText(snippet: unknown): string {
 function formatAge(timestamp: unknown): string | null {
   if (!timestamp) return null
 
-  const date = new Date(String(timestamp))
-  if (Number.isNaN(date.getTime())) return null
+  const date =
+    timestamp instanceof Date
+      ? timestamp
+      : typeof timestamp === "string" || typeof timestamp === "number"
+        ? new Date(timestamp)
+        : null
+  if (!date || Number.isNaN(date.getTime())) return null
 
   const diffMs = Date.now() - date.getTime()
   if (diffMs < 0) return null
