@@ -120,3 +120,8 @@ worktrees
 worktrunk's
 xclip
 xsel
+skvlt
+xixu
+anthropics
+bunx
+Composio

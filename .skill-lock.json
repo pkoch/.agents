@@ -1,0 +1,40 @@
+{
+  "version": 3,
+  "skills": {
+    "skills-cli": {
+      "source": "xixu-me/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/xixu-me/skills.git",
+      "skillPath": "skills/skills-cli/SKILL.md",
+      "skillFolderHash": "d9259364ea5633d5a9a3194f5ea09fcdafe509e1",
+      "installedAt": "2026-04-04T17:40:32.195Z",
+      "updatedAt": "2026-04-04T17:40:32.195Z"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/skills.git",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "skillFolderHash": "3013fdeb8a11b10b1eb795ec3ae8bfca38f7c26d",
+      "installedAt": "2026-04-04T17:40:51.104Z",
+      "updatedAt": "2026-04-04T17:40:51.104Z"
+    }
+  },
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": [
+    "amp",
+    "antigravity",
+    "cline",
+    "codex",
+    "cursor",
+    "deepagents",
+    "firebender",
+    "gemini-cli",
+    "github-copilot",
+    "kimi-cli",
+    "opencode",
+    "warp"
+  ]
+}
