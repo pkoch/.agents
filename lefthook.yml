@@ -6,7 +6,7 @@ pre-commit:
   parallel: true
   fail_on_changes: ci
   jobs:
-    - run: bun run cspell {staged_files}
+    - run: bun run cspell lint {staged_files}
     - run: bun run oxfmt {staged_files}
       stage_fixed: true
     - run: bun run oxlint --fix {staged_files}
