@@ -23,6 +23,8 @@ https://keepachangelog.com/en/1.1.0/
 - Prefer `CHANGELOG.md`.
 - If missing, use `CHANGELOG`.
 
+If neither of those are present, then the project probably doesn't use a changelog.
+
 ## Step-by-step
 
 ### 1) Identify the baseline (last released version)

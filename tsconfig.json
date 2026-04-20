@@ -1,8 +1,0 @@
-{
-  "files": [],
-  "references": [
-    { "path": "./pi" },
-    { "path": "./skills/browser-tools" },
-    { "path": "./skills/search" }
-  ]
-}

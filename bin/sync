@@ -6,32 +6,18 @@ set -euo pipefail
 # Source of truth:
 #   - ~/.agents/AGENTS.md                 (shared instructions)
 #   - ~/.agents/skills                    (Agent Skills standard)
-#   - ~/.agents/pi/extensions             (Pi-specific extensions)
-#   - ~/.agents/pi/agent/sandbox.json     (Pi sandbox config)
 #
 # Targets:
 #   - Codex:  ~/.codex/AGENTS.md
 #   - Claude: ~/.claude/CLAUDE.md + ~/.claude/skills
-#   - Pi:     ~/.pi/agent/AGENTS.md + ~/.pi/agent/extensions + ~/.pi/agent/sandbox.json
-#
-# Notes:
-#   - Pi and Codex auto-discover skills from ~/.agents/skills.
-#   - Pi does not auto-discover ~/.agents/AGENTS.md as global context.
 
 AGENTS_SKILLS_DIR="${HOME}/.agents/skills"
 AGENTS_INSTRUCTIONS_FILE="${HOME}/.agents/AGENTS.md"
-AGENTS_PI_EXTENSIONS_DIR="${HOME}/.agents/pi/extensions"
-AGENTS_PI_AGENT_DIR="${HOME}/.agents/pi/agent"
-AGENTS_PI_SANDBOX_FILE="${AGENTS_PI_AGENT_DIR}/sandbox.json"
 
 CLAUDE_SKILLS_DIR="${HOME}/.claude/skills"
-PI_AGENT_DIR="${HOME}/.pi/agent"
-PI_EXTENSIONS_DIR="${PI_AGENT_DIR}/extensions"
-PI_SANDBOX_FILE="${PI_AGENT_DIR}/sandbox.json"
 
 CODEX_INSTRUCTIONS_FILE="${HOME}/.codex/AGENTS.md"
 CLAUDE_INSTRUCTIONS_FILE="${HOME}/.claude/CLAUDE.md"
-PI_INSTRUCTIONS_FILE="${PI_AGENT_DIR}/AGENTS.md"
 
 DRY_RUN=0
 YES=0
@@ -39,7 +25,7 @@ PRUNE=0
 
 usage() {
   cat <<'EOF'
-	Symlink ~/.agents into Codex + Claude + Pi.
+	Symlink ~/.agents into Codex + Claude.
 
 Usage:
   sync [--dry-run] [--yes] [--prune]
@@ -47,17 +33,14 @@ Usage:
 Options:
   --dry-run   Print planned changes only
   --yes       Apply without prompting
-  --prune     Remove skills/extensions from agent folders that are not present in ~/.agents
+  --prune     Remove repo-managed skill symlinks that are not present in ~/.agents
 
 Notes:
   - ~/.agents/AGENTS.md is symlinked to:
       - ~/.codex/AGENTS.md
       - ~/.claude/CLAUDE.md
-      - ~/.pi/agent/AGENTS.md
   - ~/.agents/skills are symlinked only to ~/.claude/skills.
-  - Codex and Pi auto-discover skills from ~/.agents/skills.
-  - Pi extensions are synced from ~/.agents/pi/extensions to ~/.pi/agent/extensions, excluding node_modules.
-  - Pi sandbox config is symlinked from ~/.agents/pi/agent/sandbox.json to ~/.pi/agent/sandbox.json.
+  - Codex auto-discover skills from ~/.agents/skills.
 EOF
 }
 
@@ -89,11 +72,8 @@ done
 
 mkdir -p \
   "${AGENTS_SKILLS_DIR}" \
-  "${AGENTS_PI_EXTENSIONS_DIR}" \
-  "${AGENTS_PI_AGENT_DIR}" \
   "${CLAUDE_SKILLS_DIR}" \
-  "${PI_AGENT_DIR}" \
-  "${PI_EXTENSIONS_DIR}"
+;
 
 skills=()
 for skill_dir in "${AGENTS_SKILLS_DIR}"/*; do
@@ -101,27 +81,6 @@ for skill_dir in "${AGENTS_SKILLS_DIR}"/*; do
   skill_name="$(basename "${skill_dir}")"
   [[ "${skill_name}" == .* ]] && continue
   skills+=("${skill_name}")
-done
-
-pi_extensions=()
-for entry in "${AGENTS_PI_EXTENSIONS_DIR}"/*; do
-  [[ -e "${entry}" ]] || continue
-  base="$(basename "${entry}")"
-  [[ "${base}" == .* ]] && continue
-  [[ "${base}" == "node_modules" ]] && continue
-
-  if [[ -d "${entry}" ]]; then
-    pi_extensions+=("${base}")
-    continue
-  fi
-
-  if [[ -f "${entry}" ]]; then
-    # pi auto-discovers *.ts. Ignore .d.ts (types-only).
-    case "${base}" in
-      *.d.ts) continue ;;
-      *.ts) pi_extensions+=("${base}") ;;
-    esac
-  fi
 done
 
 declare -a plan=()
@@ -134,13 +93,10 @@ plan_symlink() {
 
 plan_remove() {
   local path="$1"
-  case "${path}" in
-    "${CLAUDE_SKILLS_DIR}"/* | \
-    "${PI_EXTENSIONS_DIR}"/* | \
-    "${CODEX_INSTRUCTIONS_FILE}" | \
-    "${CLAUDE_INSTRUCTIONS_FILE}" | \
-    "${PI_INSTRUCTIONS_FILE}" | \
-    "${PI_SANDBOX_FILE}")
+  case "${path}" in "${CLAUDE_SKILLS_DIR}"/* \
+    | "${CODEX_INSTRUCTIONS_FILE}" \
+    | "${CLAUDE_INSTRUCTIONS_FILE}" \
+    )
       plan+=("rmrf:${path}")
       ;;
     *)
@@ -183,7 +139,7 @@ done
 
 # --- Instructions ---
 if [[ -f "${AGENTS_INSTRUCTIONS_FILE}" ]]; then
-  for target in "${CODEX_INSTRUCTIONS_FILE}" "${CLAUDE_INSTRUCTIONS_FILE}" "${PI_INSTRUCTIONS_FILE}"; do
+  for target in "${CODEX_INSTRUCTIONS_FILE}" "${CLAUDE_INSTRUCTIONS_FILE}"; do
     if [[ -L "${target}" ]]; then
       existing_target="$(readlink "${target}")"
       if [[ "${existing_target}" == "${AGENTS_INSTRUCTIONS_FILE}" ]]; then
@@ -211,81 +167,29 @@ else
   echo "warn: ${AGENTS_INSTRUCTIONS_FILE} not found; skipping instruction sync" >&2
 fi
 
-# --- Pi sandbox config ---
-if [[ -f "${AGENTS_PI_SANDBOX_FILE}" ]]; then
-  if [[ -L "${PI_SANDBOX_FILE}" ]]; then
-    existing_target="$(readlink "${PI_SANDBOX_FILE}")"
-    if [[ "${existing_target}" != "${AGENTS_PI_SANDBOX_FILE}" ]]; then
-      plan_remove "${PI_SANDBOX_FILE}"
-      plan_symlink "${AGENTS_PI_SANDBOX_FILE}" "${PI_SANDBOX_FILE}"
-    fi
-  elif [[ -e "${PI_SANDBOX_FILE}" ]]; then
-    plan_remove "${PI_SANDBOX_FILE}"
-    plan_symlink "${AGENTS_PI_SANDBOX_FILE}" "${PI_SANDBOX_FILE}"
-  else
-    plan_symlink "${AGENTS_PI_SANDBOX_FILE}" "${PI_SANDBOX_FILE}"
-  fi
-else
-  echo "warn: ${AGENTS_PI_SANDBOX_FILE} not found; skipping Pi sandbox config sync" >&2
-fi
-
-# --- Pi extensions ---
-for ext_name in "${pi_extensions[@]}"; do
-  src="${AGENTS_PI_EXTENSIONS_DIR}/${ext_name}"
-  dest="${PI_EXTENSIONS_DIR}/${ext_name}"
-
-  if [[ -L "${dest}" ]]; then
-    existing_target="$(readlink "${dest}")"
-    if [[ "${existing_target}" == "${src}" ]]; then
-      continue
-    fi
-    plan_remove "${dest}"
-    plan_symlink "${src}" "${dest}"
-    continue
-  fi
-
-  if [[ -e "${dest}" ]]; then
-    # Match instructions behavior: replace existing file/dir with the symlink.
-    plan_remove "${dest}"
-    plan_symlink "${src}" "${dest}"
-    continue
-  fi
-
-  plan_symlink "${src}" "${dest}"
-done
-
 # --- Prune ---
 if [[ "${PRUNE}" -eq 1 ]]; then
-  # Prune Claude skills
-  for target_root in "${CLAUDE_SKILLS_DIR}"; do
-    for entry in "${target_root}"/*; do
-      [[ -e "${entry}" ]] || continue
-      base="$(basename "${entry}")"
-      [[ "${base}" == ".system" ]] && continue
-
-      keep=0
-      for skill_name in "${skills[@]}"; do
-        if [[ "${base}" == "${skill_name}" ]]; then
-          keep=1
-          break
-        fi
-      done
-
-      if [[ "${keep}" -eq 0 ]]; then
-        plan_remove "${entry}"
-      fi
-    done
-  done
-
-  # Prune pi extensions
-  for entry in "${PI_EXTENSIONS_DIR}"/*; do
-    [[ -e "${entry}" ]] || continue
+  for entry in "${CLAUDE_SKILLS_DIR}"/*; do
+    [[ -e "${entry}" || -L "${entry}" ]] || continue
     base="$(basename "${entry}")"
-    [[ "${base}" == "node_modules" ]] && continue
+    [[ "${base}" == ".system" ]] && continue
+    [[ -L "${entry}" ]] || continue
+
+    target="$(readlink "${entry}")"
+    case "${target}" in
+      "${AGENTS_SKILLS_DIR}"/*) ;;
+      *) continue ;;
+    esac
+
+    expected_target="${AGENTS_SKILLS_DIR}/${base}"
+    if [[ "${target}" == "${expected_target}" && ! -d "${expected_target}" ]]; then
+      plan_remove "${entry}"
+      continue
+    fi
 
     keep=0
-    for ext_name in "${pi_extensions[@]}"; do
-      if [[ "${base}" == "${ext_name}" ]]; then
+    for skill_name in "${skills[@]}"; do
+      if [[ "${base}" == "${skill_name}" ]]; then
         keep=1
         break
       fi

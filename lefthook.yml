@@ -2,19 +2,8 @@ pre-commit:
   parallel: true
   fail_on_changes: ci
   jobs:
-    - run: bun run cspell lint {staged_files}
-    - run: bun run oxfmt --no-error-on-unmatched-pattern {staged_files}
+    - run: pnpm exec cspell lint {staged_files}
+    - run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-    - run: bun run oxlint --fix --no-error-on-unmatched-pattern {staged_files}
+    - run: pnpm exec oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-
-#     - name: govet
-#       files: git ls-files -m
-#       glob: "*.go"
-#       run: go vet -- {files}
-#
-#     - script: "hello.js"
-#       runner: node
-#
-#     - script: "hello.go"
-#       runner: go run

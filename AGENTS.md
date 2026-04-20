@@ -1,8 +1,8 @@
 ## Workflow
 
 - Starting a task: Read this guide end-to-end. Re-skim when major decisions arise or requirements shift.
-- Reviewing git status or diffs: Treat them as read-only. Never revert or assume missing changes were yours.
-- Planning: Study the existing codebase’s architecture, patterns, and conventions first; use external docs only when needed. Prioritize consistency, then simplicity.
+- Reviewing git status or diffs: Treat them as read-only. Never revert or assume missing or extra changes are yours.
+- Planning: Study the existing codebase’s architecture, patterns, and conventions first. Use external docs only when needed. Prioritize consistency, then simplicity.
 - Trade-offs: If there's meaningful tension between approaches, ask the user before committing.
 - Adding a dependency: Research well-maintained options and confirm fit with the user before adding.
 - Starting to code: Don't start building until asked to.
@@ -30,10 +30,7 @@
 ## Skills
 
 - Use the `oracle` skill when you need a review, a second opinion, or you're stuck.
-- Use the `search` skill when you need unified web search with automatic provider selection.
 - Use the `git-commit` skill when you will commit changes or propose commit messages.
-- Use the `browser-tools` skill when you need to interact with web pages or automate browser actions.
-- Use the `web-design` skill when you need to design and implement distinctive, production-ready web interfaces.
 - Use the `update-changelog` skill when you need to update CHANGELOG.md following Keep a Changelog.
 
 ## Tools
