@@ -3,9 +3,9 @@ pre-commit:
   fail_on_changes: ci
   jobs:
     - run: bun run cspell lint {staged_files}
-    - run: bun run oxfmt {staged_files}
+    - run: bun run oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-    - run: bun run oxlint --fix {staged_files}
+    - run: bun run oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
 
 #     - name: govet
